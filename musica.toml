@@ -1,0 +1,81 @@
+[general]
+seed = 0
+
+[training]
+epochs = 60
+batch_size = 32
+learning_rate = 0.001
+force_retrain = false
+val_ratio = 0.15
+test_ratio = 0.15
+
+[features]
+sample_rate = 22050
+target_duration = 1.5
+hop_length = 512
+bins_per_octave = 12
+n_chroma = 12
+
+[prediction]
+top_k = 3
+example_audio_path = "E_maj.wav"
+
+[paths]
+dataset_dir = "audio/chords"
+logs_dir = "logs"
+legacy_model_path = "logs/best_model.keras"
+legacy_params_path = "logs/best_model.params.json"
+midi_output_dir = "audio/chords/midi"
+clean_output_dir = "audio/chords/clean"
+noise_download_dir = "assets/noises/internet"
+noisy_output_dir = "audio/chords/noisy"
+realistic_output_dir = "audio/chords/realistic"
+transposed_output_dir = "audio/chords/transposed"
+recorded_audio_dir = "audio/chords/recorded"
+audio_manifest_path = "audio/manifest.csv"
+
+[model]
+model_architecture = "cnn_chords_chroma_cqt_v1"
+
+[audio]
+chord_duration = 1.5
+chord_sample_rate = 44100
+renderer = "auto"
+soundfont_path = "assets/soundfonts/FluidR3_GM.sf2"
+instrument_programs = { piano = 0, guitar = 24, synth_pad = 88 }
+repetitions = 1
+octave_offsets = [-1, 0, 1]
+velocities = [80, 100, 120]
+
+[humanization]
+humanize = true
+humanize_onset_ms = 35.0
+velocity_jitter = 8
+
+[noise]
+noise_snrs_db = [15.0]
+noise_mode = "cycle"
+
+[realism]
+realism_variants = 2
+realism_sample_rates = [22050, 44100, 48000]
+realism_keep_duration = false
+
+[transpose]
+transpose_semitones = [-5, 7]
+transpose_roots = []
+transpose_qualities = []
+
+[manifest]
+manifest_train_ratio = 0.80
+manifest_val_ratio = 0.10
+manifest_test_ratio = 0.10
+include_missing_audio = false
+
+[callbacks]
+early_stopping_patience = 8
+early_stopping_min_delta = 0.0001
+reduce_lr_factor = 0.3
+reduce_lr_patience = 4
+min_lr = 0.000001
+tensorboard_histogram_freq = 0

@@ -1,0 +1,14 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+.venv/
+.idea/
+
+/audio/
+runs/
+mlruns/
+mlflow.db*
+logs/
+
+assets/soundfonts/*.sf2
