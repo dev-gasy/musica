@@ -24,7 +24,7 @@ class ChordPredictor:
         self.labels = labels
 
     def predict(self, model: Any, audio_path: Path | None = None) -> list[tuple[str, float]]:
-        requested_path = audio_path or self.config.example_audio_path
+        requested_path = audio_path or self.default_audio_path()
         path = self.config.resolve_path(self.extractor.dataset.project_root, requested_path)
         logger.info("Prediction de l'audio: {}", path)
         features = self.extractor.audio_features(path)
@@ -34,3 +34,11 @@ class ChordPredictor:
             (self.labels[int(index)], float(probabilities[int(index)]))
             for index in top_indices
         ]
+
+    def default_audio_path(self) -> Path:
+        audio_paths = self.config.examples.audio_paths(self.extractor.dataset.project_root)
+        if not audio_paths:
+            raise FileNotFoundError(
+                f"No example audio files found in {self.config.examples.directory}"
+            )
+        return audio_paths[0]

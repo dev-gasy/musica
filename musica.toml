@@ -18,13 +18,10 @@ n_chroma = 12
 
 [prediction]
 top_k = 3
-example_audio_path = "E_maj.wav"
 
 [paths]
 dataset_dir = "audio/chords"
 logs_dir = "logs"
-legacy_model_path = "logs/best_model.keras"
-legacy_params_path = "logs/best_model.params.json"
 midi_output_dir = "audio/chords/midi"
 clean_output_dir = "audio/chords/clean"
 noise_download_dir = "assets/noises/internet"
@@ -33,6 +30,9 @@ realistic_output_dir = "audio/chords/realistic"
 transposed_output_dir = "audio/chords/transposed"
 recorded_audio_dir = "audio/chords/recorded"
 audio_manifest_path = "audio/manifest.csv"
+
+[examples]
+directory = "examples"
 
 [model]
 model_architecture = "cnn_chords_chroma_cqt_v1"

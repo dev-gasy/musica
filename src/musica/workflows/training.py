@@ -55,10 +55,14 @@ def run_pipeline(project_root: Path | None = None) -> None:
         FeatureExtractor(config, prepared.dataset),
         prepared.dataset.labels,
     )
-    predictions = predictor.predict(training.model)
-    print(f"Audio exemple : {config.example_audio_path}")
-    for label, probability in predictions:
-        print(f"{label:8s} {probability:.3f}")
+    example_audio_files = config.examples.audio_paths(root)
+    if not example_audio_files:
+        raise FileNotFoundError(f"No example audio files found in {config.examples.directory}")
+    for audio_path in example_audio_files:
+        predictions = predictor.predict(training.model, audio_path)
+        print(f"Audio exemple : {audio_path}")
+        for label, probability in predictions:
+            print(f"{label:8s} {probability:.3f}")
     logger.info("Pipeline Musica termine")
 
 

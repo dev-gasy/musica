@@ -168,24 +168,6 @@ class ChordTrainer:
             logger.info("Cache hit: chargement de {}", model_path)
             return tf.keras.models.load_model(model_path), model_path, history_log_path
 
-        legacy_model_path = self.config.resolve_path(
-            self.project_root,
-            self.config.legacy_model_path,
-        )
-        legacy_params_path = self.config.resolve_path(
-            self.project_root,
-            self.config.legacy_params_path,
-        )
-        if self.can_use_legacy_cache(legacy_model_path, legacy_params_path):
-            legacy_signature = json.loads(legacy_params_path.read_text()).get("signature")
-            if legacy_signature == signature:
-                logger.info("Cache legacy hit: chargement de {}", legacy_model_path)
-                return (
-                    tf.keras.models.load_model(legacy_model_path),
-                    legacy_model_path,
-                    self.logs_dir / "training_log.csv",
-                )
-
         if self.config.force_retrain:
             logger.info("Cache ignore car force_retrain=true")
         else:
@@ -195,13 +177,6 @@ class ChordTrainer:
     def cached_model_paths(self, signature: str) -> tuple[Path, Path]:
         run_dir = self.logs_dir / "models" / signature
         return run_dir / "best_model.keras", run_dir / "training_log.csv"
-
-    def can_use_legacy_cache(self, model_path: Path, params_path: Path) -> bool:
-        return (
-            not self.config.force_retrain
-            and model_path.exists()
-            and params_path.exists()
-        )
 
     def build_augmented_model(
         self,

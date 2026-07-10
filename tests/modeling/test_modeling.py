@@ -7,6 +7,7 @@ from musica.modeling import (
     ChordDataset,
     ChordTrainer,
     DatasetSplit,
+    ExampleAudioConfig,
     MusicaConfig,
     PreparedData,
     TranspositionAugmenter,
@@ -74,6 +75,8 @@ def test_config_loads_sectioned_toml(tmp_path: Path) -> None:
                 "sample_rate = 16000",
                 "[paths]",
                 "dataset_dir = 'sectioned/chords'",
+                "[examples]",
+                "directory = 'examples'",
                 "[audio]",
                 "instrument_programs = { piano = 0, organ = 19 }",
                 "octave_offsets = [-1, 0]",
@@ -93,6 +96,7 @@ def test_config_loads_sectioned_toml(tmp_path: Path) -> None:
     assert config.batch_size == 8
     assert config.sample_rate == 16000
     assert config.dataset_dir == Path("sectioned/chords")
+    assert config.examples.directory == Path("examples")
     assert config.instrument_programs == {"piano": 0, "organ": 19}
     assert config.octave_offsets == (-1, 0)
     assert config.velocities == (90, 110)
@@ -101,9 +105,28 @@ def test_config_loads_sectioned_toml(tmp_path: Path) -> None:
 
 
 def test_config_coerces_path_values_with_pydantic() -> None:
-    config = MusicaConfig(dataset_dir="custom/chords")
+    config = MusicaConfig(
+        dataset_dir="custom/chords",
+        examples={"directory": "examples"},
+    )
 
     assert config.dataset_dir == Path("custom/chords")
+    assert config.examples.directory == Path("examples")
+
+
+def test_example_audio_config_lists_audio_files(tmp_path: Path) -> None:
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    (examples_dir / "C_maj.wav").write_bytes(b"audio")
+    (examples_dir / "D_min.mp3").write_bytes(b"audio")
+    (examples_dir / "notes.txt").write_text("ignore")
+
+    examples = ExampleAudioConfig(directory=Path("examples"))
+
+    assert examples.audio_paths(tmp_path) == [
+        examples_dir / "C_maj.wav",
+        examples_dir / "D_min.mp3",
+    ]
 
 
 def test_config_validates_direct_instantiation() -> None:

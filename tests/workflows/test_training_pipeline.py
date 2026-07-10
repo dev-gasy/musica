@@ -7,9 +7,21 @@ from musica.workflows import training
 
 
 def test_main_pipeline_orchestrates_without_cli_args(monkeypatch, tmp_path: Path, capsys) -> None:
+    example_paths = (
+        tmp_path / "examples" / "C_maj.wav",
+        tmp_path / "examples" / "D_min.wav",
+    )
+
+    class FakeExamples:
+        directory = Path("examples")
+
+        def audio_paths(self, project_root: Path):
+            assert project_root == tmp_path
+            return list(example_paths)
+
     config = SimpleNamespace(
         top_k=2,
-        example_audio_path=Path("audio/chords/clean/C/C_maj_piano_oct0_vel100.wav"),
+        examples=FakeExamples(),
     )
     dataset = SimpleNamespace(
         audio_paths=[Path("a.wav"), Path("b.wav")],
@@ -59,12 +71,17 @@ def test_main_pipeline_orchestrates_without_cli_args(monkeypatch, tmp_path: Path
             assert received_config is config
             assert labels == ["C_maj", "D_min"]
 
-        def predict(self, received_model):
+        def predict(self, received_model, audio_path):
             assert received_model is model
+            assert audio_path in example_paths
             return [("C_maj", 0.75), ("D_min", 0.25)]
 
     monkeypatch.setattr(training.MusicaConfig, "load", lambda path: config)
-    monkeypatch.setattr(training, "prepare_data", lambda received_config, project_root=None: prepared)
+    monkeypatch.setattr(
+        training,
+        "prepare_data",
+        lambda received_config, project_root=None: prepared,
+    )
     monkeypatch.setattr(training, "ChordTrainer", FakeTrainer)
     monkeypatch.setattr(training, "ChordEvaluator", FakeEvaluator)
     monkeypatch.setattr(training, "ChordPredictor", FakePredictor)
@@ -76,4 +93,6 @@ def test_main_pipeline_orchestrates_without_cli_args(monkeypatch, tmp_path: Path
     assert "Signature: abc123" in output
     assert "Modele reutilise: logs/best_model.keras" in output
     assert "Test accuracy : 0.9000" in output
+    assert f"Audio exemple : {example_paths[0]}" in output
+    assert f"Audio exemple : {example_paths[1]}" in output
     assert "C_maj    0.750" in output

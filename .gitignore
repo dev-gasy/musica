@@ -9,6 +9,5 @@ __pycache__/
 runs/
 mlruns/
 mlflow.db*
-logs/
 
 assets/soundfonts/*.sf2
