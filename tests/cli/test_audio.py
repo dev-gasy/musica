@@ -218,6 +218,91 @@ def test_setup_env_skips_steps_that_are_already_done(
     assert "SKIP recorded audio files: 0 already synced" in output
 
 
+def test_setup_env_warns_and_continues_when_soundfont_download_fails(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("musica.cli.shutil.which", lambda _name: "/usr/bin/fluidsynth")
+    monkeypatch.setattr(
+        "musica.cli.download_soundfont",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            OSError("HTTP Error 403: Forbidden")
+        ),
+    )
+    monkeypatch.setattr(
+        "musica.cli.download_noise_wavs",
+        lambda output_dir, **_kwargs: output_dir.mkdir(parents=True, exist_ok=True) or [object()],
+    )
+    monkeypatch.setattr(
+        "musica.cli.ensure_training_audio_dataset",
+        lambda config, project_root, **_kwargs: type(
+            "Result",
+            (),
+            {
+                "generated": True,
+                "generated_count": 1,
+                "output_dir": project_root / "audio" / "chords" / "clean",
+                "renderer": "pretty-midi",
+                "manifest_path": project_root / "audio" / "chords" / "clean" / "manifest.csv",
+                "noisy_generated_count": 0,
+                "noisy_output_dir": project_root / "audio" / "chords" / "noisy",
+                "realistic_generated_count": 0,
+                "realistic_output_dir": project_root / "audio" / "chords" / "realistic",
+                "recorded_source_dir": project_root / "assets" / "recorded",
+                "recorded_dir": project_root / "audio" / "chords" / "recorded",
+                "recorded_copied_count": 0,
+            },
+        )(),
+    )
+    args = argparse.Namespace(
+        platform="macos",
+        plan_only=False,
+        download_assets=True,
+        overwrite_assets=False,
+        generate_audio=True,
+        force_audio=False,
+        renderer="auto",
+        max_audio_files=None,
+    )
+
+    run_setup_env(args, MusicaConfig())
+
+    output = capsys.readouterr().out
+    assert "WARN SoundFont: download failed (HTTP Error 403: Forbidden)" in output
+    assert "continuing without SoundFont; auto renderer will use PrettyMIDI" in output
+    assert "DONE clean chord WAV files: generated 1" in output
+    assert "using pretty-midi" in output
+
+
+def test_setup_env_fails_when_fluidsynth_requires_missing_soundfont(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("musica.cli.shutil.which", lambda _name: "/usr/bin/fluidsynth")
+    monkeypatch.setattr(
+        "musica.cli.download_soundfont",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            OSError("HTTP Error 403: Forbidden")
+        ),
+    )
+    args = argparse.Namespace(
+        platform="macos",
+        plan_only=False,
+        download_assets=True,
+        overwrite_assets=False,
+        generate_audio=True,
+        force_audio=False,
+        renderer="fluidsynth",
+        max_audio_files=None,
+    )
+
+    with pytest.raises(RuntimeError, match="--renderer fluidsynth requires"):
+        run_setup_env(args, MusicaConfig())
+
+
 def test_download_soundfont_uses_default_url_and_path() -> None:
     parser = build_parser()
 

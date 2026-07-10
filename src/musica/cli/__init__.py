@@ -5,8 +5,10 @@ from __future__ import annotations
 import argparse
 import platform
 import shutil
+import sys
 from pathlib import Path
 from typing import Callable
+from urllib.error import HTTPError, URLError
 
 from musica.audio.chords import (
     HumanizationConfig,
@@ -789,12 +791,22 @@ def run_setup_env(args: argparse.Namespace, config: MusicaConfig) -> None:
         if soundfont_path.exists() and not args.overwrite_assets:
             print(f"  SKIP SoundFont: already exists at {soundfont_path}")
         else:
-            download_soundfont(
-                soundfont_path,
-                url=DEFAULT_SOUNDFONT_URL,
-                overwrite=args.overwrite_assets,
-            )
-            print(f"  DONE SoundFont: ready at {soundfont_path}")
+            try:
+                download_soundfont(
+                    soundfont_path,
+                    url=DEFAULT_SOUNDFONT_URL,
+                    overwrite=args.overwrite_assets,
+                )
+            except (HTTPError, URLError, OSError) as error:
+                if args.renderer == "fluidsynth":
+                    raise RuntimeError(
+                        "SoundFont download failed and --renderer fluidsynth "
+                        f"requires {soundfont_path}: {error}"
+                    ) from error
+                print(f"  WARN SoundFont: download failed ({error})")
+                print("       continuing without SoundFont; auto renderer will use PrettyMIDI")
+            else:
+                print(f"  DONE SoundFont: ready at {soundfont_path}")
 
         existing_noise_files = list_wav_files(noise_dir) if noise_dir.exists() else []
         if len(existing_noise_files) >= len(DEFAULT_INTERNET_NOISES) and not args.overwrite_assets:
@@ -898,4 +910,5 @@ def main() -> None:
     try:
         handler(args, config)
     except (FileNotFoundError, OSError, RuntimeError, ValueError) as error:
-        parser.error(str(error))
+        print(f"musica: error: {error}", file=sys.stderr)
+        raise SystemExit(1) from error

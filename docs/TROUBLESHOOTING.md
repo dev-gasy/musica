@@ -107,7 +107,12 @@ Erreurs possibles :
 SoundFont not found
 HTTPError
 URLError
+HTTP Error 403: Forbidden
 ```
+
+La SoundFont est utile seulement pour FluidSynth. Si le site externe refuse le
+téléchargement avec `HTTP Error 403: Forbidden`, `setup-env` continue sans elle
+et le renderer `auto` utilise PrettyMIDI.
 
 Relancer le setup complet :
 
