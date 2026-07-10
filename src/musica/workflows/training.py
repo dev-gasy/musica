@@ -18,11 +18,16 @@ from musica.modeling import (
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
-def run_pipeline(project_root: Path | None = None) -> None:
+def run_pipeline(
+        project_root: Path | None = None,
+        *,
+        config_path: Path | None = None,
+        config: MusicaConfig | None = None,
+) -> None:
     configure_logging()
     root = PROJECT_ROOT if project_root is None else project_root
     logger.info("Demarrage du pipeline Musica")
-    config = MusicaConfig.load(root / "musica.toml")
+    config = config or MusicaConfig.load(config_path or root / "musica.toml")
     prepared = prepare_data(config, project_root=root)
     trainer = ChordTrainer(config, prepared.dataset, project_root=root)
     training = trainer.train_or_load(prepared)

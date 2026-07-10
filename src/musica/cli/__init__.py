@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import platform
+import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -12,6 +14,7 @@ from musica.audio.chords import (
     generate_chord_wav_files,
     write_generated_audio_manifest,
 )
+from musica.audio.io import list_wav_files
 from musica.audio.manifest import build_audio_manifest
 from musica.augmentation.noise import (
     DEFAULT_INTERNET_NOISES,
@@ -24,9 +27,19 @@ from musica.augmentation.noise import (
 from musica.augmentation.realism import augment_wav_dataset_with_realism
 from musica.augmentation.transpose import augment_wav_dataset_with_transposition
 from musica.config import MusicaConfig
+from musica.workflows.audio_bootstrap import ensure_training_audio_dataset
 
 CommandHandler = Callable[[argparse.Namespace, MusicaConfig], None]
 DEFAULT_SOUNDFONT_URL = "https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2"
+SETUP_ENV_COMMANDS = {
+    "macos": ("brew install fluid-synth",),
+    "linux": (
+        "sudo apt install fluidsynth",
+        "sudo dnf install fluidsynth",
+        "sudo pacman -S fluidsynth",
+    ),
+    "windows": ("choco install fluidsynth",),
+}
 
 
 def positive_float(value: str) -> float:
@@ -165,6 +178,66 @@ def build_parser(config: MusicaConfig | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="musica")
     parser.set_defaults(config=config)
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    setup_env_parser = subparsers.add_parser(
+        "setup-env",
+        help="Run reproducible setup steps, skipping steps that are already done.",
+    )
+    setup_env_parser.set_defaults(download_assets=True, generate_audio=True)
+    setup_env_parser.add_argument(
+        "--platform",
+        choices=("auto", "macos", "linux", "windows"),
+        default="auto",
+        help="Target platform for FluidSynth install instructions.",
+    )
+    setup_env_parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="Only print the setup plan and detected state.",
+    )
+    setup_env_parser.add_argument(
+        "--download-assets",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    setup_env_parser.add_argument(
+        "--skip-assets",
+        action="store_false",
+        dest="download_assets",
+        help="Skip SoundFont and noise WAV asset setup.",
+    )
+    setup_env_parser.add_argument(
+        "--overwrite-assets",
+        action="store_true",
+        help="Redownload assets that already exist.",
+    )
+    setup_env_parser.add_argument(
+        "--generate-audio",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    setup_env_parser.add_argument(
+        "--skip-audio",
+        action="store_false",
+        dest="generate_audio",
+        help="Skip generated chord WAV setup.",
+    )
+    setup_env_parser.add_argument(
+        "--force-audio",
+        action="store_true",
+        help="Regenerate clean chord WAV files even when WAV files already exist.",
+    )
+    setup_env_parser.add_argument(
+        "--renderer",
+        choices=("auto", "pretty-midi", "fluidsynth"),
+        default=config.renderer,
+        help="Renderer used for generated chord WAV setup.",
+    )
+    setup_env_parser.add_argument(
+        "--max-audio-files",
+        type=positive_int,
+        help="Limit generated WAV files, useful for setup smoke tests.",
+    )
 
     midi_parser = subparsers.add_parser(
         "generate-midi",
@@ -666,7 +739,144 @@ def run_build_manifest(args: argparse.Namespace, config: MusicaConfig) -> None:
     print(f"Splits: {summary.split_counts}")
 
 
+def run_setup_env(args: argparse.Namespace, config: MusicaConfig) -> None:
+    project_root = Path.cwd()
+    target_platform = resolve_setup_platform(args.platform)
+    soundfont_path = config.resolve_path(project_root, config.soundfont_path)
+    noise_dir = config.resolve_path(project_root, config.noise_download_dir)
+    dataset_dir = config.resolve_path(project_root, config.dataset_dir)
+
+    print("Musica reproducible setup")
+    print("")
+    print("Reference setup commands:")
+    print("  uv sync --extra dev")
+    for command in SETUP_ENV_COMMANDS[target_platform]:
+        print(f"  {command}")
+    print("  uv run musica download-assets")
+    print("  uv run python main.py --audio-only")
+    print("  uv run pytest")
+    print("")
+    print("Configured paths:")
+    print(f"  SoundFont: {soundfont_path}")
+    print(f"  Noises:    {noise_dir}")
+    print(f"  Dataset:   {dataset_dir}")
+    print("")
+
+    print("Setup steps:")
+    print("  SKIP python dependencies: command is running inside the project environment")
+
+    fluidsynth_path = shutil.which("fluidsynth")
+    if fluidsynth_path:
+        print(f"  SKIP FluidSynth: found at {fluidsynth_path}")
+    else:
+        print("  TODO FluidSynth: not found on PATH")
+        print(
+            "       install one of: "
+            + " OR ".join(SETUP_ENV_COMMANDS[target_platform])
+        )
+
+    if args.plan_only:
+        print("  PLAN assets: would ensure SoundFont and noise WAV files")
+        print(
+            "  PLAN audio: would ensure clean, noisy, realistic, "
+            "and copy assets/recorded into recorded"
+        )
+        print("")
+        print("Plan only: no files were changed.")
+        return
+
+    if args.download_assets:
+        if soundfont_path.exists() and not args.overwrite_assets:
+            print(f"  SKIP SoundFont: already exists at {soundfont_path}")
+        else:
+            download_soundfont(
+                soundfont_path,
+                url=DEFAULT_SOUNDFONT_URL,
+                overwrite=args.overwrite_assets,
+            )
+            print(f"  DONE SoundFont: ready at {soundfont_path}")
+
+        existing_noise_files = list_wav_files(noise_dir) if noise_dir.exists() else []
+        if len(existing_noise_files) >= len(DEFAULT_INTERNET_NOISES) and not args.overwrite_assets:
+            print(f"  SKIP noise WAV files: {len(existing_noise_files)} already in {noise_dir}")
+        else:
+            downloaded_noises = download_noise_wavs(
+                noise_dir,
+                sources=DEFAULT_INTERNET_NOISES,
+                overwrite=args.overwrite_assets,
+            )
+            print(f"  DONE noise WAV files: {len(downloaded_noises)} ready in {noise_dir}")
+    else:
+        print("  SKIP assets: disabled by --skip-assets")
+
+    if args.generate_audio:
+        result = ensure_training_audio_dataset(
+            config,
+            project_root,
+            renderer=args.renderer,
+            max_files=args.max_audio_files,
+            force=args.force_audio,
+            include_derived=True,
+        )
+        if result.generated:
+            print(
+                f"  DONE clean chord WAV files: generated {result.generated_count} in {result.output_dir} "
+                f"using {result.renderer}"
+            )
+            print(f"Wrote manifest to {result.manifest_path}")
+        else:
+            print(f"  SKIP clean chord WAV files: {result.wav_count} already in {result.dataset_dir}")
+        if result.noisy_generated_count:
+            print(
+                f"  DONE noisy chord WAV files: generated {result.noisy_generated_count} "
+                f"in {result.noisy_output_dir}"
+            )
+        else:
+            noisy_count = len(list_wav_files(result.noisy_output_dir)) if result.noisy_output_dir else 0
+            print(f"  SKIP noisy chord WAV files: {noisy_count} already in {result.noisy_output_dir}")
+        if result.realistic_generated_count:
+            print(
+                f"  DONE realistic chord WAV files: generated {result.realistic_generated_count} "
+                f"in {result.realistic_output_dir}"
+            )
+        else:
+            realistic_count = (
+                len(list_wav_files(result.realistic_output_dir))
+                if result.realistic_output_dir else 0
+            )
+            print(
+                f"  SKIP realistic chord WAV files: {realistic_count} "
+                f"already in {result.realistic_output_dir}"
+            )
+        if result.recorded_copied_count:
+            print(
+                f"  DONE recorded audio files: copied {result.recorded_copied_count} "
+                f"from {result.recorded_source_dir} to {result.recorded_dir}"
+            )
+        else:
+            recorded_count = len(list_wav_files(result.recorded_dir)) if result.recorded_dir else 0
+            print(
+                f"  SKIP recorded audio files: {recorded_count} already synced "
+                f"from {result.recorded_source_dir} to {result.recorded_dir}"
+            )
+    else:
+        print("  SKIP audio: disabled by --skip-audio")
+
+
+def resolve_setup_platform(requested_platform: str) -> str:
+    if requested_platform != "auto":
+        return requested_platform
+
+    system = platform.system().lower()
+    if system == "darwin":
+        return "macos"
+    if system == "windows":
+        return "windows"
+    return "linux"
+
+
 COMMAND_HANDLERS: dict[str, CommandHandler] = {
+    "setup-env": run_setup_env,
     "generate-midi": run_generate_midi,
     "generate-wav": run_generate_wav,
     "download-noises": run_download_noises,

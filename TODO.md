@@ -25,6 +25,7 @@ consultables, mais ne font plus partie du package actif.
 ## Commandes actives
 
 ```bash
+uv run musica setup-env
 uv run musica generate-midi
 uv run musica download-assets
 uv run musica generate-wav
@@ -39,6 +40,7 @@ uv run musica build-manifest
 ```bash
 uv run pytest
 uv run musica --help
+uv run musica setup-env
 uv run musica download-assets
 uv run musica generate-wav --duration 0.5 --max-files 6 --renderer pretty-midi
 uv run musica build-manifest

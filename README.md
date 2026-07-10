@@ -581,7 +581,25 @@ utilise. Sinon, la génération WAV peut passer par PrettyMIDI. La SoundFont
 FluidR3 GM peut être téléchargée depuis
 [Musical Artifacts](https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2).
 
-1. Télécharger les ressources externes en une seule commande :
+1. Afficher les étapes reproductibles pour une nouvelle machine :
+
+```bash
+uv run musica setup-env
+```
+
+La commande couvre l’installation Python, FluidSynth selon le système, les assets
+et la génération audio. Par défaut, elle exécute les étapes automatisables,
+saute celles qui sont déjà prêtes et garantit la structure
+`audio/chords/clean`, `audio/chords/noisy`, `audio/chords/realistic` et
+`audio/chords/recorded`. Les enregistrements réels versionnés dans
+`assets/recorded` sont copiés vers `audio/chords/recorded` pendant le setup.
+Pour seulement afficher le plan :
+
+```bash
+uv run musica setup-env --plan-only
+```
+
+2. Télécharger les ressources externes en une seule commande :
 
 ```bash
 uv run musica download-assets
@@ -593,7 +611,7 @@ bruits WAV configurés par défaut pour l’augmentation. Les chemins de sortie
 viennent de `musica.toml` : `soundfont_path` dans `[audio]` et
 `noise_download_dir` dans `[noise]`.
 
-2. Générer des WAV propres :
+3. Générer des WAV propres :
 
 ```bash
 uv run musica generate-wav
@@ -607,44 +625,44 @@ le rendu PrettyMIDI :
 uv run musica generate-wav --renderer pretty-midi
 ```
 
-3. Créer des variantes bruitées :
+4. Créer des variantes bruitées :
 
 ```bash
 uv run musica augment-noise
 ```
 
-4. Créer des variantes plus réalistes :
+5. Créer des variantes plus réalistes :
 
 ```bash
 uv run musica augment-realistic
 ```
 
-5. Transposer les accords et mettre à jour les étiquettes :
+6. Transposer les accords et mettre à jour les étiquettes :
 
 ```bash
 uv run musica augment-transpose
 ```
 
-6. Compiler le manifest global :
+7. Compiler le manifest global :
 
 ```bash
 uv run musica build-manifest
 ```
 
-7. Lancer le scénario complet de modélisation :
+8. Lancer le scénario complet de modélisation :
 
 ```bash
 uv run python main.py
 ```
 
-8. Ouvrir le notebook de démonstration :
+9. Ouvrir le notebook de démonstration :
 
 ```bash
 uv run python -m ipykernel install --user --name musica --display-name "Musica"
 jupyter lab musica.ipynb
 ```
 
-9. Lancer les tests :
+10. Lancer les tests :
 
 ```bash
 uv run pytest

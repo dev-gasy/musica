@@ -3,13 +3,19 @@ from pathlib import Path
 
 import pytest
 
-from musica.cli import build_parser, run_download_assets, run_download_soundfont
+from musica.cli import (
+    build_parser,
+    run_download_assets,
+    run_download_soundfont,
+    run_setup_env,
+)
 from musica.config import MusicaConfig
 
 
 def test_audio_commands_are_registered() -> None:
     parser = build_parser()
 
+    assert parser.parse_args(["setup-env"]).command == "setup-env"
     assert parser.parse_args(["generate-midi"]).command == "generate-midi"
     assert parser.parse_args(["generate-wav"]).command == "generate-wav"
     assert parser.parse_args(["download-noises"]).command == "download-noises"
@@ -66,6 +72,150 @@ def test_generate_wav_accepts_audio_dataset_args() -> None:
     assert args.renderer == "pretty-midi"
     assert args.humanize is False
     assert args.no_manifest is True
+
+
+def test_setup_env_accepts_reproducible_setup_args() -> None:
+    parser = build_parser()
+
+    args = parser.parse_args(
+        [
+            "setup-env",
+            "--platform",
+            "macos",
+            "--overwrite-assets",
+            "--force-audio",
+            "--renderer",
+            "pretty-midi",
+            "--max-audio-files",
+            "3",
+        ]
+    )
+
+    assert args.command == "setup-env"
+    assert args.platform == "macos"
+    assert args.download_assets is True
+    assert args.overwrite_assets is True
+    assert args.generate_audio is True
+    assert args.force_audio is True
+    assert args.renderer == "pretty-midi"
+    assert args.max_audio_files == 3
+
+
+def test_setup_env_accepts_skip_args() -> None:
+    parser = build_parser()
+
+    args = parser.parse_args(["setup-env", "--skip-assets", "--skip-audio"])
+
+    assert args.download_assets is False
+    assert args.generate_audio is False
+
+
+def test_setup_env_plan_only_prints_steps_without_side_effects(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("musica.cli.shutil.which", lambda _name: None)
+    config = MusicaConfig(
+        soundfont_path=Path("assets/soundfonts/FluidR3_GM.sf2"),
+        noise_download_dir=Path("assets/noises/internet"),
+        dataset_dir=Path("audio/chords"),
+    )
+    args = argparse.Namespace(
+        platform="macos",
+        plan_only=True,
+        download_assets=True,
+        overwrite_assets=False,
+        generate_audio=True,
+        force_audio=False,
+        renderer="auto",
+        max_audio_files=None,
+    )
+
+    run_setup_env(args, config)
+
+    output = capsys.readouterr().out
+    assert "Musica reproducible setup" in output
+    assert "uv sync --extra dev" in output
+    assert "brew install fluid-synth" in output
+    assert "uv run musica download-assets" in output
+    assert "uv run python main.py --audio-only" in output
+    assert "TODO FluidSynth: not found on PATH" in output
+    assert "PLAN audio: would ensure clean, noisy, realistic, and copy assets/recorded" in output
+    assert "Plan only: no files were changed." in output
+    assert not (tmp_path / "assets").exists()
+
+
+def test_setup_env_skips_steps_that_are_already_done(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("musica.cli.shutil.which", lambda _name: "/usr/bin/fluidsynth")
+    monkeypatch.setattr(
+        "musica.cli.download_soundfont",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("soundfont should not download")
+        ),
+    )
+    monkeypatch.setattr(
+        "musica.cli.download_noise_wavs",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("noises should not download")
+        ),
+    )
+    monkeypatch.setattr(
+        "musica.cli.ensure_training_audio_dataset",
+        lambda config, project_root, **_kwargs: type(
+            "Result",
+            (),
+            {
+                "generated": False,
+                "wav_count": 1,
+                "dataset_dir": project_root / "audio" / "chords",
+                "noisy_generated_count": 0,
+                "noisy_output_dir": project_root / "audio" / "chords" / "noisy",
+                "realistic_generated_count": 0,
+                "realistic_output_dir": project_root / "audio" / "chords" / "realistic",
+                "recorded_source_dir": project_root / "assets" / "recorded",
+                "recorded_dir": project_root / "audio" / "chords" / "recorded",
+                "recorded_copied_count": 0,
+            },
+        )(),
+    )
+    soundfont_path = tmp_path / "assets" / "soundfonts" / "FluidR3_GM.sf2"
+    soundfont_path.parent.mkdir(parents=True)
+    soundfont_path.write_bytes(b"sf2")
+    noise_dir = tmp_path / "assets" / "noises" / "internet"
+    noise_dir.mkdir(parents=True)
+    for index in range(3):
+        (noise_dir / f"noise-{index}.wav").write_bytes(b"wav")
+    config = MusicaConfig(
+        soundfont_path=Path("assets/soundfonts/FluidR3_GM.sf2"),
+        noise_download_dir=Path("assets/noises/internet"),
+        dataset_dir=Path("audio/chords"),
+    )
+    args = argparse.Namespace(
+        platform="macos",
+        plan_only=False,
+        download_assets=True,
+        overwrite_assets=False,
+        generate_audio=True,
+        force_audio=False,
+        renderer="auto",
+        max_audio_files=None,
+    )
+
+    run_setup_env(args, config)
+
+    output = capsys.readouterr().out
+    assert "SKIP FluidSynth: found at /usr/bin/fluidsynth" in output
+    assert "SKIP SoundFont: already exists" in output
+    assert "SKIP noise WAV files: 3 already" in output
+    assert "SKIP clean chord WAV files: 1 already" in output
+    assert "SKIP recorded audio files: 0 already synced" in output
 
 
 def test_download_soundfont_uses_default_url_and_path() -> None:
