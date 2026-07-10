@@ -9,9 +9,9 @@ from typing import Any
 
 import numpy as np
 
+from musica.config import MusicaConfig
 from musica.logging import logger
 from musica.modeling.augmentation import TranspositionAugmenter
-from musica.config import MusicaConfig
 from musica.modeling.constants import QUALITIES, ROOTS
 from musica.modeling.dataset import ChordDataset, DatasetSplit
 from musica.modeling.utils import stable_digest
@@ -48,10 +48,10 @@ class RunArtifacts:
 
 class ChordTrainer:
     def __init__(
-        self,
-        config: MusicaConfig,
-        dataset: ChordDataset,
-        project_root: Path | None = None,
+            self,
+            config: MusicaConfig,
+            dataset: ChordDataset,
+            project_root: Path | None = None,
     ) -> None:
         self.config = config
         self.dataset = dataset
@@ -59,10 +59,10 @@ class ChordTrainer:
         self.logs_dir = config.resolve_path(self.project_root, config.logs_dir)
 
     def build_model(
-        self,
-        input_shape: tuple[int, ...],
-        label_count: int,
-        normalizer: Any,
+            self,
+            input_shape: tuple[int, ...],
+            label_count: int,
+            normalizer: Any,
     ) -> Any:
         import tensorflow as tf
         from tensorflow.keras import Sequential
@@ -101,14 +101,7 @@ class ChordTrainer:
         model.add(Dropout(0.15))
 
         model.add(GlobalAveragePooling2D())
-        model.add(
-            Dense(
-                128,
-                activation="relu",
-                kernel_initializer="he_uniform",
-                kernel_regularizer=l2(1e-4),
-            )
-        )
+        model.add(Dense(128, activation="relu", kernel_initializer="he_uniform", kernel_regularizer=l2(1e-4), ))
         model.add(Dropout(0.25))
         model.add(Dense(label_count, activation="softmax"))
 
@@ -179,8 +172,8 @@ class ChordTrainer:
         return run_dir / "best_model.keras", run_dir / "training_log.csv"
 
     def build_augmented_model(
-        self,
-        prepared: PreparedData,
+            self,
+            prepared: PreparedData,
     ) -> tuple[Any, np.ndarray, np.ndarray]:
         import tensorflow as tf
         from tensorflow.keras.layers import Normalization
@@ -210,10 +203,10 @@ class ChordTrainer:
         )
 
     def write_training_metadata(
-        self,
-        signature: str,
-        split: DatasetSplit,
-        params_path: Path,
+            self,
+            signature: str,
+            split: DatasetSplit,
+            params_path: Path,
     ) -> None:
         logger.info("Ecriture des metadonnees du run: {}", params_path)
         params_path.write_text(
@@ -265,9 +258,9 @@ class ChordTrainer:
         ]
 
     def train_or_load(
-        self,
-        prepared: PreparedData,
-        fit_kwargs: dict[str, Any] | None = None,
+            self,
+            prepared: PreparedData,
+            fit_kwargs: dict[str, Any] | None = None,
     ) -> TrainingResult:
         signature = self.signature(prepared.split)
         cached = self.load_cached_model(signature)

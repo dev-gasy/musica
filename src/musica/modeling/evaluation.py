@@ -21,11 +21,11 @@ class EvaluationResult:
 
 class ChordEvaluator:
     def evaluate(
-        self,
-        model: Any,
-        x_test: np.ndarray,
-        y_test: np.ndarray,
-        labels: list[str],
+            self,
+            model: Any,
+            x_test: np.ndarray,
+            y_test: np.ndarray,
+            labels: list[str],
     ) -> EvaluationResult:
         logger.info("Evaluation sur le test: {} exemples", x_test.shape[0])
         y_pred_proba = model.predict(x_test, verbose=0)

@@ -283,10 +283,10 @@ def normalize_config_data(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def merge_section(
-    normalized: dict[str, dict[str, Any]],
-    unknown: list[str],
-    section: str,
-    values: dict[str, Any],
+        normalized: dict[str, dict[str, Any]],
+        unknown: list[str],
+        section: str,
+        values: dict[str, Any],
 ) -> None:
     section_data = normalized.setdefault(section, {})
     section_fields = CONFIG_SECTIONS[section]

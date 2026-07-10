@@ -85,7 +85,6 @@ flowchart TD
     F --> G["Entraînement du modèle"]
     G --> H["Évaluation"]
     H --> I["Prédiction"]
-
     J["musica.toml"] --> B
     J --> C
     J --> E
@@ -127,11 +126,11 @@ données locales disponibles.
 La répartition utilisée pendant ce run par `uv run python main.py` était la
 suivante :
 
-| Séparation | Rôle | Fichiers | Proportion |
-| --- | --- | ---: | ---: |
-| Entraînement | Apprendre les motifs audio associés aux accords | 2 772 | environ 70,6 % |
-| Validation | Suivre la généralisation pendant l’entraînement | 576 | environ 14,7 % |
-| Test | Évaluer le modèle sur des fichiers non utilisés pendant l’apprentissage | 576 | environ 14,7 % |
+| Séparation   | Rôle                                                                    | Fichiers |     Proportion |
+|--------------|-------------------------------------------------------------------------|---------:|---------------:|
+| Entraînement | Apprendre les motifs audio associés aux accords                         |    2 772 | environ 70,6 % |
+| Validation   | Suivre la généralisation pendant l’entraînement                         |      576 | environ 14,7 % |
+| Test         | Évaluer le modèle sur des fichiers non utilisés pendant l’apprentissage |      576 | environ 14,7 % |
 
 Cette répartition correspond au split stratifié de modélisation, configuré par
 `val_ratio = 0.15` et `test_ratio = 0.15` dans `musica.toml`. Elle est différente
@@ -158,7 +157,8 @@ générés localement.
 
 Jeux de données externes utiles :
 
-* GuitarSet : [page officielle](https://guitarset.weebly.com/) et [téléchargement Zenodo](https://zenodo.org/records/3371780) ;
+* GuitarSet : [page officielle](https://guitarset.weebly.com/)
+  et [téléchargement Zenodo](https://zenodo.org/records/3371780) ;
 * MusicNet : [téléchargement Zenodo](https://zenodo.org/records/5120004).
 
 ## Architecture logicielle
@@ -222,17 +222,17 @@ graphiques de prédiction.
 Les principaux graphiques exportés depuis le notebook sont versionnés dans
 `docs/images/` :
 
-| Graphique | Fichier | Ce qu’il montre |
-| --- | --- | --- |
-| Vue dataset | `docs/images/notebook-dataset-overview.png` | Volume global, features extraites, sources audio et qualités d’accord |
-| Splits | `docs/images/notebook-split-distribution.png` | Répartition train/validation/test et contrôle stratifié par classe |
-| Audio + feature | `docs/images/notebook-audio-chroma.png` | Onde audio d’un exemple et représentation Chroma CQT utilisée par le CNN |
-| Courbes | `docs/images/notebook-training-curves.png` | Accuracy, loss et learning rate du run |
-| Évaluation | `docs/images/notebook-test-metrics.png` | Accuracy, F1 macro et loss sur le test |
-| Confusion | `docs/images/notebook-confusion-normalized.png` | Matrice de confusion normalisée |
-| Rapport | `docs/images/notebook-classification-report.png` | Rapport de classification sous forme de tableau |
-| Erreurs | `docs/images/notebook-error-analysis.png` | Classes les plus faibles et principales confusions |
-| Prédictions | `docs/images/notebook-example-predictions.png` | Top-k sur les fichiers WAV du dossier `examples/` |
+| Graphique       | Fichier                                          | Ce qu’il montre                                                          |
+|-----------------|--------------------------------------------------|--------------------------------------------------------------------------|
+| Vue dataset     | `docs/images/notebook-dataset-overview.png`      | Volume global, features extraites, sources audio et qualités d’accord    |
+| Splits          | `docs/images/notebook-split-distribution.png`    | Répartition train/validation/test et contrôle stratifié par classe       |
+| Audio + feature | `docs/images/notebook-audio-chroma.png`          | Onde audio d’un exemple et représentation Chroma CQT utilisée par le CNN |
+| Courbes         | `docs/images/notebook-training-curves.png`       | Accuracy, loss et learning rate du run                                   |
+| Évaluation      | `docs/images/notebook-test-metrics.png`          | Accuracy, F1 macro et loss sur le test                                   |
+| Confusion       | `docs/images/notebook-confusion-normalized.png`  | Matrice de confusion normalisée                                          |
+| Rapport         | `docs/images/notebook-classification-report.png` | Rapport de classification sous forme de tableau                          |
+| Erreurs         | `docs/images/notebook-error-analysis.png`        | Classes les plus faibles et principales confusions                       |
+| Prédictions     | `docs/images/notebook-example-predictions.png`   | Top-k sur les fichiers WAV du dossier `examples/`                        |
 
 <p align="center">
   <img src="docs/images/notebook-test-metrics.png" alt="Scores de généralisation du notebook" width="80%">
@@ -466,14 +466,14 @@ Les garde-fous d’apprentissage sont les suivants :
 Le pipeline produit des artefacts qui permettent de comparer les expériences et
 de vérifier exactement ce qui a été entraîné :
 
-| Artefact | Chemin | Utilité |
-| --- | --- | --- |
-| Modèle entraîné | `logs/models/<signature>/best_model.keras` | Recharger le meilleur modèle sauvegardé pendant l’entraînement |
-| Paramètres | `logs/models/<signature>/params.json` | Garder la configuration, les chemins, les classes et les signatures de données |
-| Historique | `logs/models/<signature>/training_log.csv` | Revoir la perte et l’exactitude à chaque époque |
-| TensorBoard | `logs/models/<signature>/tensorboard/` | Inspecter l’exécution avec des outils de visualisation |
-| Notebook | `musica.ipynb` | Lire et rejouer la démonstration complète avec les graphiques inline |
-| Helpers notebook | `notebook_helpers.py` | Garder les fonctions d’analyse et d’affichage hors du notebook |
+| Artefact         | Chemin                                     | Utilité                                                                        |
+|------------------|--------------------------------------------|--------------------------------------------------------------------------------|
+| Modèle entraîné  | `logs/models/<signature>/best_model.keras` | Recharger le meilleur modèle sauvegardé pendant l’entraînement                 |
+| Paramètres       | `logs/models/<signature>/params.json`      | Garder la configuration, les chemins, les classes et les signatures de données |
+| Historique       | `logs/models/<signature>/training_log.csv` | Revoir la perte et l’exactitude à chaque époque                                |
+| TensorBoard      | `logs/models/<signature>/tensorboard/`     | Inspecter l’exécution avec des outils de visualisation                         |
+| Notebook         | `musica.ipynb`                             | Lire et rejouer la démonstration complète avec les graphiques inline           |
+| Helpers notebook | `notebook_helpers.py`                      | Garder les fonctions d’analyse et d’affichage hors du notebook                 |
 
 Le run inspecté dans le notebook correspond à la signature `bddbd88ac5d1`. Cette
 signature dépend des données et des paramètres du moment. Si le jeu de données,
@@ -482,14 +482,14 @@ produite.
 
 Les métriques imprimées par le pipeline sont :
 
-| Métrique | Où elle est calculée | Interprétation |
-| --- | --- | --- |
-| `loss` | Entraînement et validation, à chaque époque | Erreur optimisée par le réseau. Une baisse indique que le modèle ajuste mieux les exemples. |
-| `accuracy` | Entraînement et validation, à chaque époque | Proportion de prédictions correctes. Elle est simple à lire mais peut masquer des classes faibles. |
-| `test_loss` | Test final | Perte sur les fichiers jamais utilisés pour apprendre ou régler l’entraînement. |
-| `test_accuracy` | Test final | Proportion globale de fichiers test correctement classés. |
-| `F1 macro` | Test final | Moyenne du F1 par classe, sans favoriser les classes plus nombreuses. Elle est importante pour vérifier l’équilibre entre accords. |
-| Rapport de classification | Test final | Précision, rappel, F1 et support pour chaque accord. Dans le notebook, il est affiché sous forme de DataFrame. |
+| Métrique                  | Où elle est calculée                        | Interprétation                                                                                                                     |
+|---------------------------|---------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `loss`                    | Entraînement et validation, à chaque époque | Erreur optimisée par le réseau. Une baisse indique que le modèle ajuste mieux les exemples.                                        |
+| `accuracy`                | Entraînement et validation, à chaque époque | Proportion de prédictions correctes. Elle est simple à lire mais peut masquer des classes faibles.                                 |
+| `test_loss`               | Test final                                  | Perte sur les fichiers jamais utilisés pour apprendre ou régler l’entraînement.                                                    |
+| `test_accuracy`           | Test final                                  | Proportion globale de fichiers test correctement classés.                                                                          |
+| `F1 macro`                | Test final                                  | Moyenne du F1 par classe, sans favoriser les classes plus nombreuses. Elle est importante pour vérifier l’équilibre entre accords. |
+| Rapport de classification | Test final                                  | Précision, rappel, F1 et support pour chaque accord. Dans le notebook, il est affiché sous forme de DataFrame.                     |
 
 <p align="center">
   <img src="docs/images/notebook-training-curves.png" alt="Courbes d’entraînement, validation et learning rate" width="100%">
@@ -519,10 +519,10 @@ Pour le run `bddbd88ac5d1`, le notebook exécuté sur le split test de 576 exemp
 affiche les résultats suivants :
 
 | Métrique test | Valeur |
-| --- | ---: |
-| Accuracy | 0,9948 |
-| Loss | 0,0380 |
-| F1 macro | 0,9948 |
+|---------------|-------:|
+| Accuracy      | 0,9948 |
+| Loss          | 0,0380 |
+| F1 macro      | 0,9948 |
 
 <p align="center">
   <img src="docs/images/notebook-classification-report.png" alt="Rapport de classification sous forme de DataFrame" width="80%">

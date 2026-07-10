@@ -6,12 +6,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from IPython.display import Markdown, display
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from IPython.display import Markdown, display
 from sklearn.metrics import classification_report, confusion_matrix
 
 COLORS = {
@@ -37,10 +37,10 @@ def setup_notebook_style() -> None:
 
 
 def show_table(
-    title: str,
-    rows: list[tuple[Any, Any]],
-    col_labels: tuple[str, str] = ("Champ", "Valeur"),
-    figsize: tuple[float, float] | None = None,
+        title: str,
+        rows: list[tuple[Any, Any]],
+        col_labels: tuple[str, str] = ("Champ", "Valeur"),
+        figsize: tuple[float, float] | None = None,
 ) -> None:
     table_rows = [(str(left), str(right)) for left, right in rows]
     height = max(1.8, 0.42 * len(table_rows) + 1.1)
@@ -214,9 +214,9 @@ def plot_split_distribution(dataset: Any, audit: dict[str, Any]) -> None:
     x = np.arange(len(dataset.labels))
     width = 0.26
     for offset, (name, paths) in zip(
-        [-width, 0, width],
-        split_paths.items(),
-        strict=True,
+            [-width, 0, width],
+            split_paths.items(),
+            strict=True,
     ):
         axes[1].bar(
             x + offset,
@@ -253,10 +253,10 @@ def plot_split_distribution(dataset: Any, audit: dict[str, Any]) -> None:
 
 
 def plot_audio_and_feature(
-    audio_path: Path,
-    feature: np.ndarray,
-    label: str,
-    config: Any,
+        audio_path: Path,
+        feature: np.ndarray,
+        label: str,
+        config: Any,
 ) -> None:
     audio, _ = librosa.load(audio_path, sr=config.sample_rate, mono=True)
     duration = len(audio) / config.sample_rate
@@ -523,7 +523,8 @@ def plot_error_analysis(labels: list[str], report: dict[str, Any], cm: np.ndarra
     return top_confusions
 
 
-def plot_example_predictions(predictor: Any, model: Any, dataset: Any, example_audio_files: list[Path]) -> list[tuple[str, str, str, float]]:
+def plot_example_predictions(predictor: Any, model: Any, dataset: Any, example_audio_files: list[Path]) -> list[
+    tuple[str, str, str, float]]:
     fig, axes = plt.subplots(
         len(example_audio_files),
         1,

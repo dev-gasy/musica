@@ -117,11 +117,11 @@ def noise_sources_from_urls(urls: list[str]) -> list[NoiseSource]:
 
 
 def download_noise_wavs(
-    output_dir: Path,
-    *,
-    sources: list[NoiseSource] | tuple[NoiseSource, ...] = DEFAULT_INTERNET_NOISES,
-    overwrite: bool = False,
-    manifest_path: Path | None = None,
+        output_dir: Path,
+        *,
+        sources: list[NoiseSource] | tuple[NoiseSource, ...] = DEFAULT_INTERNET_NOISES,
+        overwrite: bool = False,
+        manifest_path: Path | None = None,
 ) -> list[DownloadedNoise]:
     output_dir.mkdir(parents=True, exist_ok=True)
     downloaded: list[DownloadedNoise] = []
@@ -156,15 +156,15 @@ def download_url(url: str, output_path: Path) -> None:
 
 
 def augment_wav_dataset_with_noise(
-    input_dir: Path,
-    noise_dir: Path,
-    output_dir: Path,
-    *,
-    snrs_db: tuple[float, ...] = DEFAULT_CONFIG.noise_snrs_db,
-    mode: str = DEFAULT_CONFIG.noise_mode,
-    max_files: int | None = None,
-    random_seed: int = DEFAULT_CONFIG.seed,
-    manifest_path: Path | None = None,
+        input_dir: Path,
+        noise_dir: Path,
+        output_dir: Path,
+        *,
+        snrs_db: tuple[float, ...] = DEFAULT_CONFIG.noise_snrs_db,
+        mode: str = DEFAULT_CONFIG.noise_mode,
+        max_files: int | None = None,
+        random_seed: int = DEFAULT_CONFIG.seed,
+        manifest_path: Path | None = None,
 ) -> list[NoisyAudio]:
     if mode not in {"cycle", "all"}:
         raise ValueError("mode must be 'cycle' or 'all'")
@@ -222,9 +222,9 @@ def augment_wav_dataset_with_noise(
 
 
 def noise_files_for_source(
-    noise_files: list[Path],
-    mode: str,
-    source_index: int,
+        noise_files: list[Path],
+        mode: str,
+        source_index: int,
 ) -> list[Path]:
     if mode == "all":
         return noise_files
@@ -232,9 +232,9 @@ def noise_files_for_source(
 
 
 def prepare_noise_for_signal(
-    noise_path: Path,
-    signal: np.ndarray,
-    sample_rate: int,
+        noise_path: Path,
+        signal: np.ndarray,
+        sample_rate: int,
 ) -> np.ndarray:
     noise, noise_sample_rate = read_audio(noise_path)
     noise = match_sample_rate(noise, noise_sample_rate, sample_rate)
@@ -255,9 +255,9 @@ def match_channels(noise: np.ndarray, signal: np.ndarray) -> np.ndarray:
 
 
 def select_noise_segment(
-    noise: np.ndarray,
-    target_samples: int,
-    rng: np.random.Generator,
+        noise: np.ndarray,
+        target_samples: int,
+        rng: np.random.Generator,
 ) -> tuple[np.ndarray, int]:
     if len(noise) < target_samples:
         repeats = int(np.ceil(target_samples / len(noise)))
@@ -284,10 +284,10 @@ def rms(audio: np.ndarray) -> float:
 
 
 def rng_for_mix(
-    random_seed: int,
-    source_path: Path,
-    noise_path: Path,
-    snr_db: float,
+        random_seed: int,
+        source_path: Path,
+        noise_path: Path,
+        snr_db: float,
 ) -> np.random.Generator:
     seed_material = f"{random_seed}:{source_path}:{noise_path}:{snr_db}"
     digest = hashlib.sha256(seed_material.encode("utf-8")).digest()
@@ -295,11 +295,11 @@ def rng_for_mix(
 
 
 def noisy_output_path(
-    input_dir: Path,
-    output_dir: Path,
-    source_path: Path,
-    noise_path: Path,
-    snr_db: float,
+        input_dir: Path,
+        output_dir: Path,
+        source_path: Path,
+        noise_path: Path,
+        snr_db: float,
 ) -> Path:
     relative_source = source_path.relative_to(input_dir)
     snr_label = format_snr_label(snr_db)
@@ -322,8 +322,8 @@ def safe_filename(value: str) -> str:
 
 
 def write_noise_download_manifest(
-    downloaded: list[DownloadedNoise],
-    manifest_path: Path,
+        downloaded: list[DownloadedNoise],
+        manifest_path: Path,
 ) -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with manifest_path.open("w", newline="") as file:
@@ -346,8 +346,8 @@ def write_noise_download_manifest(
 
 
 def write_noisy_audio_manifest(
-    generated: list[NoisyAudio],
-    manifest_path: Path,
+        generated: list[NoisyAudio],
+        manifest_path: Path,
 ) -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with manifest_path.open("w", newline="") as file:

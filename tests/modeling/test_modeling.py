@@ -245,8 +245,8 @@ def test_training_signature_changes_with_callback_strategy(tmp_path: Path) -> No
 
 
 def test_feature_extractor_reuses_cached_features(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
 ) -> None:
     write_fake_dataset(tmp_path, labels=("C_maj",))
     config = MusicaConfig(feature_cache_dir=Path("cache/features"))
@@ -281,8 +281,8 @@ def test_feature_extractor_reuses_cached_features(
 
 
 def test_train_or_load_cache_hit_does_not_fit(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
 ) -> None:
     config = MusicaConfig()
     dataset = ChordDataset(config, project_root=tmp_path)

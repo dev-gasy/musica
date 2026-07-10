@@ -48,15 +48,15 @@ class RealisticAudio:
 
 
 def augment_wav_dataset_with_realism(
-    input_dir: Path,
-    output_dir: Path,
-    *,
-    variants: int = DEFAULT_CONFIG.realism_variants,
-    sample_rates: tuple[int, ...] = DEFAULT_CONFIG.realism_sample_rates,
-    max_files: int | None = None,
-    random_seed: int = DEFAULT_CONFIG.seed,
-    keep_duration: bool = DEFAULT_CONFIG.realism_keep_duration,
-    manifest_path: Path | None = None,
+        input_dir: Path,
+        output_dir: Path,
+        *,
+        variants: int = DEFAULT_CONFIG.realism_variants,
+        sample_rates: tuple[int, ...] = DEFAULT_CONFIG.realism_sample_rates,
+        max_files: int | None = None,
+        random_seed: int = DEFAULT_CONFIG.seed,
+        keep_duration: bool = DEFAULT_CONFIG.realism_keep_duration,
+        manifest_path: Path | None = None,
 ) -> list[RealisticAudio]:
     validate_realism_args(variants, sample_rates)
 
@@ -104,16 +104,16 @@ def validate_realism_args(variants: int, sample_rates: tuple[int, ...]) -> None:
 
 
 def generate_realistic_variant(
-    input_dir: Path,
-    output_dir: Path,
-    source_path: Path,
-    signal: np.ndarray,
-    sample_rate: int,
-    *,
-    variant: int,
-    sample_rates: tuple[int, ...],
-    random_seed: int,
-    keep_duration: bool,
+        input_dir: Path,
+        output_dir: Path,
+        source_path: Path,
+        signal: np.ndarray,
+        sample_rate: int,
+        *,
+        variant: int,
+        sample_rates: tuple[int, ...],
+        random_seed: int,
+        keep_duration: bool,
 ) -> RealisticAudio:
     rng = rng_for_realism(random_seed, source_path, variant)
     profile = random_realism_profile(rng, sample_rates)
@@ -136,8 +136,8 @@ def generate_realistic_variant(
 
 
 def random_realism_profile(
-    rng: np.random.Generator,
-    sample_rates: tuple[int, ...],
+        rng: np.random.Generator,
+        sample_rates: tuple[int, ...],
 ) -> RealismProfile:
     return RealismProfile(
         gain_db=float(rng.uniform(-9.0, 3.0)),
@@ -157,12 +157,12 @@ def random_realism_profile(
 
 
 def apply_realism_profile(
-    signal: np.ndarray,
-    sample_rate: int,
-    profile: RealismProfile,
-    rng: np.random.Generator,
-    *,
-    keep_duration: bool,
+        signal: np.ndarray,
+        sample_rate: int,
+        profile: RealismProfile,
+        rng: np.random.Generator,
+        *,
+        keep_duration: bool,
 ) -> np.ndarray:
     original_samples = len(signal)
     audio = signal.astype(np.float32, copy=True)
@@ -200,10 +200,10 @@ def apply_gain(audio: np.ndarray, gain_db: float) -> np.ndarray:
 
 
 def spectral_filter(
-    audio: np.ndarray,
-    sample_rate: int,
-    highpass_hz: float,
-    lowpass_hz: float,
+        audio: np.ndarray,
+        sample_rate: int,
+        highpass_hz: float,
+        lowpass_hz: float,
 ) -> np.ndarray:
     filtered_channels = []
     frequencies = np.fft.rfftfreq(len(audio), d=1.0 / sample_rate)
@@ -250,10 +250,10 @@ def raised_cosine(position: np.ndarray) -> np.ndarray:
 
 
 def apply_static_compression(
-    audio: np.ndarray,
-    *,
-    threshold_db: float,
-    ratio: float,
+        audio: np.ndarray,
+        *,
+        threshold_db: float,
+        ratio: float,
 ) -> np.ndarray:
     threshold = float(10 ** (threshold_db / 20.0))
     magnitude = np.abs(audio)
@@ -273,12 +273,12 @@ def apply_saturation(audio: np.ndarray, drive: float) -> np.ndarray:
 
 
 def apply_synthetic_room_reverb(
-    audio: np.ndarray,
-    sample_rate: int,
-    *,
-    wet: float,
-    decay_seconds: float,
-    rng: np.random.Generator,
+        audio: np.ndarray,
+        sample_rate: int,
+        *,
+        wet: float,
+        decay_seconds: float,
+        rng: np.random.Generator,
 ) -> np.ndarray:
     if wet <= 0:
         return audio
@@ -292,9 +292,9 @@ def apply_synthetic_room_reverb(
 
 
 def synthetic_room_impulse(
-    sample_rate: int,
-    decay_seconds: float,
-    rng: np.random.Generator,
+        sample_rate: int,
+        decay_seconds: float,
+        rng: np.random.Generator,
 ) -> np.ndarray:
     impulse_samples = max(1, int(sample_rate * decay_seconds))
     times = np.arange(impulse_samples) / sample_rate
@@ -338,11 +338,11 @@ def convert_channels(audio: np.ndarray, output_channels: int) -> np.ndarray:
 
 
 def add_silence(
-    audio: np.ndarray,
-    sample_rate: int,
-    *,
-    pre_silence_ms: float,
-    post_silence_ms: float,
+        audio: np.ndarray,
+        sample_rate: int,
+        *,
+        pre_silence_ms: float,
+        post_silence_ms: float,
 ) -> np.ndarray:
     pre_samples = int(round(sample_rate * pre_silence_ms / 1000.0))
     post_samples = int(round(sample_rate * post_silence_ms / 1000.0))
@@ -358,9 +358,9 @@ def peak_limit(audio: np.ndarray, peak: float = 0.99) -> np.ndarray:
 
 
 def rng_for_realism(
-    random_seed: int,
-    source_path: Path,
-    variant: int,
+        random_seed: int,
+        source_path: Path,
+        variant: int,
 ) -> np.random.Generator:
     seed_material = f"{random_seed}:{source_path}:{variant}"
     digest = hashlib.sha256(seed_material.encode("utf-8")).digest()
@@ -368,10 +368,10 @@ def rng_for_realism(
 
 
 def realistic_output_path(
-    input_dir: Path,
-    output_dir: Path,
-    source_path: Path,
-    variant: int,
+        input_dir: Path,
+        output_dir: Path,
+        source_path: Path,
+        variant: int,
 ) -> Path:
     relative_source = source_path.relative_to(input_dir)
     filename = f"{source_path.stem}_real_v{variant:03d}.wav"
@@ -379,10 +379,10 @@ def realistic_output_path(
 
 
 def write_realistic_audio_manifest(
-    generated: list[RealisticAudio],
-    manifest_path: Path,
-    *,
-    keep_duration: bool,
+        generated: list[RealisticAudio],
+        manifest_path: Path,
+        *,
+        keep_duration: bool,
 ) -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with manifest_path.open("w", newline="") as file:

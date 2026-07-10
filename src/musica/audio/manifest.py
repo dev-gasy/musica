@@ -126,14 +126,14 @@ def default_manifest_sources(config: MusicaConfig | None = None) -> tuple[Manife
 
 
 def build_audio_manifest(
-    output_path: Path,
-    *,
-    sources: Iterable[ManifestSource] | None = None,
-    config: MusicaConfig | None = None,
-    train_ratio: float = 0.80,
-    val_ratio: float = 0.10,
-    test_ratio: float = 0.10,
-    include_missing_audio: bool = False,
+        output_path: Path,
+        *,
+        sources: Iterable[ManifestSource] | None = None,
+        config: MusicaConfig | None = None,
+        train_ratio: float = 0.80,
+        val_ratio: float = 0.10,
+        test_ratio: float = 0.10,
+        include_missing_audio: bool = False,
 ) -> ManifestBuildSummary:
     validate_split_ratios(train_ratio, val_ratio, test_ratio)
     resolved_sources = tuple(sources or default_manifest_sources(config))
@@ -177,11 +177,11 @@ def build_audio_manifest(
 
 
 def rows_from_raw_directory(
-    source: ManifestSource,
-    *,
-    train_ratio: float,
-    val_ratio: float,
-    include_missing_audio: bool,
+        source: ManifestSource,
+        *,
+        train_ratio: float,
+        val_ratio: float,
+        include_missing_audio: bool,
 ) -> tuple[list[CompiledManifestRow], int]:
     if source.directory is None or not source.directory.exists():
         return [], 1
@@ -218,11 +218,11 @@ def rows_from_raw_directory(
 
 
 def rows_from_generated_manifest(
-    source: ManifestSource,
-    *,
-    train_ratio: float,
-    val_ratio: float,
-    include_missing_audio: bool,
+        source: ManifestSource,
+        *,
+        train_ratio: float,
+        val_ratio: float,
+        include_missing_audio: bool,
 ) -> tuple[list[CompiledManifestRow], int]:
     if source.manifest_path is None or not source.manifest_path.exists():
         return [], 1
@@ -265,18 +265,18 @@ def rows_from_generated_manifest(
 
 
 def compiled_manifest_row(
-    *,
-    path: Path,
-    source_path: Path,
-    duration: float,
-    root_note: str,
-    quality: str,
-    dataset: str,
-    split_key: str,
-    train_ratio: float,
-    val_ratio: float,
-    source_manifest: Path | None,
-    sample_rate: int,
+        *,
+        path: Path,
+        source_path: Path,
+        duration: float,
+        root_note: str,
+        quality: str,
+        dataset: str,
+        split_key: str,
+        train_ratio: float,
+        val_ratio: float,
+        source_manifest: Path | None,
+        sample_rate: int,
 ) -> CompiledManifestRow:
     return CompiledManifestRow(
         path=path,

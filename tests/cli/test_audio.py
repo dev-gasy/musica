@@ -113,7 +113,7 @@ def test_audio_command_defaults_use_feature_first_config() -> None:
 
 
 def test_download_soundfont_handler_creates_parent_and_downloads(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+        tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls = []
 
@@ -164,7 +164,7 @@ def test_download_assets_accepts_unified_download_args() -> None:
 
 
 def test_download_assets_handler_downloads_soundfont_and_noises(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+        tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     soundfont_calls = []
     noise_calls = []

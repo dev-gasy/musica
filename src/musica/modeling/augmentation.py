@@ -16,10 +16,10 @@ class TranspositionAugmenter:
         self.n_qualities = n_qualities
 
     def augment(
-        self,
-        x: np.ndarray,
-        y: np.ndarray,
-        shifts: Iterable[int] = range(12),
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            shifts: Iterable[int] = range(12),
     ) -> tuple[np.ndarray, np.ndarray]:
         x_aug = []
         y_aug = []

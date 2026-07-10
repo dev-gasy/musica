@@ -12,16 +12,15 @@ from musica.logging import logger
 from musica.modeling.dataset import ChordDataset
 from musica.modeling.utils import stable_digest
 
-
 FEATURE_CACHE_VERSION = 1
 
 
 class FeatureExtractor:
     def __init__(
-        self,
-        config: MusicaConfig,
-        dataset: ChordDataset,
-        project_root: Path | None = None,
+            self,
+            config: MusicaConfig,
+            dataset: ChordDataset,
+            project_root: Path | None = None,
     ) -> None:
         self.config = config
         self.dataset = dataset
@@ -46,9 +45,9 @@ class FeatureExtractor:
         return chroma.T[..., np.newaxis].astype(np.float32)
 
     def load_features(
-        self,
-        paths: list[Path],
-        split_name: str | None = None,
+            self,
+            paths: list[Path],
+            split_name: str | None = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         if not paths:
             raise ValueError("Cannot load features for an empty path list")
@@ -83,9 +82,9 @@ class FeatureExtractor:
         return self.cache_dir / f"{prefix}{signature}.npz"
 
     def feature_cache_params(
-        self,
-        paths: list[Path],
-        split_name: str | None = None,
+            self,
+            paths: list[Path],
+            split_name: str | None = None,
     ) -> dict[str, Any]:
         return {
             "version": FEATURE_CACHE_VERSION,
@@ -129,10 +128,10 @@ class FeatureExtractor:
         return x, y
 
     def write_cached_features(
-        self,
-        cache_path: Path,
-        x: np.ndarray,
-        y: np.ndarray,
+            self,
+            cache_path: Path,
+            x: np.ndarray,
+            y: np.ndarray,
     ) -> None:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(cache_path, x=x, y=y)

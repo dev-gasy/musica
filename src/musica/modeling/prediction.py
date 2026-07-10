@@ -7,17 +7,17 @@ from typing import Any
 
 import numpy as np
 
-from musica.logging import logger
 from musica.config import MusicaConfig
+from musica.logging import logger
 from musica.modeling.features import FeatureExtractor
 
 
 class ChordPredictor:
     def __init__(
-        self,
-        config: MusicaConfig,
-        extractor: FeatureExtractor,
-        labels: list[str],
+            self,
+            config: MusicaConfig,
+            extractor: FeatureExtractor,
+            labels: list[str],
     ) -> None:
         self.config = config
         self.extractor = extractor
