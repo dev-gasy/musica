@@ -147,39 +147,55 @@ Jeux de données externes utiles :
 
 ## Architecture logicielle
 
-Le projet est structuré comme un package Python. Les responsabilités sont
-séparées pour éviter de mélanger génération des données, augmentation,
-modélisation et exécution des commandes.
+L’architecture logicielle est organisée autour d’un pipeline de données. Le but
+est de garder une séparation claire entre la configuration, la préparation des
+données, l’apprentissage du modèle et les artefacts produits. Cette section donne
+une vue de haut niveau ; les détails d’implémentation sont volontairement laissés
+dans le code.
 
 ```mermaid
 flowchart TD
-    A["musica.toml<br/>configuration"] --> B["CLI musica"]
-    B --> C["Audio<br/>génération MIDI et WAV"]
-    B --> D["Augmentation<br/>bruit, réalisme, transposition"]
-    B --> E["Manifest<br/>regroupement des sources"]
-    E --> F["Modélisation<br/>caractéristiques, séparation, entraînement"]
-    F --> G["Évaluation<br/>métriques et graphiques"]
-    G --> H["README<br/>analyse et guide"]
+    A["Configuration<br/>musica.toml"] --> B["Interface d'exécution<br/>CLI et pipeline"]
+    B --> C["Couche données audio<br/>sources, labels, manifests"]
+    C --> D["Couche apprentissage<br/>features, split, entraînement"]
+    D --> E["Couche évaluation<br/>métriques et prédictions"]
+    E --> F["Artefacts<br/>modèle, logs, graphiques"]
 ```
 
-Les principales parties du code sont :
+Les responsabilités sont séparées ainsi :
 
-* audio : génération MIDI et WAV, rendu audio et manifests ;
-* augmentation : bruit, réalisme audio et transposition ;
-* modélisation : configuration, découverte du jeu de données, séparations,
-  extraction Chroma CQT, entraînement, évaluation et prédiction ;
-* ligne de commande : automatisation des étapes de construction du jeu de
-  données ;
-* tests : vérification de la génération audio, des manifests, des augmentations,
-  de la ligne de commande et du scénario de modélisation.
+* la configuration décrit les paramètres reproductibles du projet ;
+* l’interface d’exécution lance les scénarios sans porter la logique métier ;
+* la couche données prépare les fichiers audio et les étiquettes exploitables ;
+* la couche apprentissage transforme ces données en caractéristiques et entraîne
+  le modèle ;
+* la couche évaluation mesure la performance et produit les sorties utilisées
+  pour analyser les essais ;
+* les artefacts gardent les résultats réutilisables : modèle entraîné,
+  historiques, paramètres et graphiques.
+
+Cette organisation évite que la génération des données, l’entraînement et
+l’analyse des résultats soient mélangés dans un même bloc de code. Elle rend
+aussi les expériences plus faciles à relancer et à comparer.
 
 ## Architecture du modèle
 
-Le modèle utilise des caractéristiques Chroma CQT extraites avec librosa. Chaque
-audio est chargé en mono à une fréquence d’échantillonnage fixe, coupé ou
-complété pour obtenir une durée cible, puis transformé en tenseur temps, hauteur
-chromatique et canal. La dimension chromatique contient 12 valeurs, une pour
-chaque classe de hauteur.
+Le modèle traite le problème comme une classification multi-classe : pour chaque
+fichier WAV, il doit choisir une classe parmi les 36 accords connus du projet.
+L’entrée du réseau n’est pas le signal audio brut. Chaque fichier est d’abord
+transformé en caractéristiques Chroma CQT avec librosa.
+
+La préparation d’un exemple suit les étapes suivantes :
+
+1. charger le fichier audio en mono ;
+2. le rééchantillonner à la fréquence configurée ;
+3. le couper ou le compléter pour obtenir la durée cible ;
+4. calculer le Chroma CQT ;
+5. convertir le résultat en tenseur `temps x 12 hauteurs x 1 canal`.
+
+Les 12 hauteurs correspondent aux 12 classes de notes chromatiques. Cette
+représentation est adaptée au problème, car un accord est principalement défini
+par des relations entre hauteurs plutôt que par la forme brute de l’onde audio.
 
 <p align="center">
   <img src="docs/images/chroma-cqt-example.png" alt="Exemple de caractéristique Chroma CQT" width="75%">
@@ -189,81 +205,218 @@ chaque classe de hauteur.
   <img src="docs/images/neural-architecture.svg" alt="Architecture neuronale simplifiée du modèle CNN" width="100%">
 </p>
 
-Avant l’apprentissage, les exemples d’entraînement sont augmentés par
-transposition. Le tenseur Chroma CQT est décalé sur l’axe des hauteurs et
-l’étiquette est recalculée pour garder la bonne fondamentale. Cette augmentation
-permet au modèle d’apprendre les mêmes relations harmoniques dans plusieurs
-tonalités.
+Le schéma ci-dessus montre le nombre exact d’éléments représentés par couche.
+Pour les couches convolutionnelles, les nœuds représentent les filtres ou cartes
+de caractéristiques, pas des neurones denses indépendants. Les cartes gardent
+encore une structure temporelle et chromatique interne.
+
+Pendant l’apprentissage, seuls les exemples d’entraînement sont augmentés par
+transposition. Le tenseur Chroma CQT est décalé sur l’axe des hauteurs, puis
+l’étiquette est recalculée pour conserver la bonne fondamentale. Cette étape
+force le modèle à apprendre les relations harmoniques entre notes au lieu de
+mémoriser une tonalité particulière.
+
+Les données de validation et de test ne servent pas à apprendre les poids du
+modèle. La validation sert à suivre la généralisation pendant l’entraînement. Le
+test sert à mesurer la performance finale sur des fichiers gardés à part.
 
 ### Détail des couches
 
-| Étape | Détail | Rôle |
-| --- | --- | --- |
-| Entrée | Chroma CQT temps, 12 hauteurs, 1 canal | Représenter l’accord sous forme exploitable par le CNN |
-| Normalisation | Adaptée sur l’entraînement augmenté | Stabiliser les valeurs d’entrée |
-| Convolution 1 | 32 filtres, noyau 3 x 12 | Observer toute la hauteur chromatique sur une courte fenêtre temporelle |
-| Bloc 1 | BatchNorm, ReLU, MaxPool, dropout 0,10 | Stabiliser, activer, réduire et régulariser |
-| Convolution 2 | 64 filtres, noyau 3 x 3 | Apprendre des motifs locaux entre temps et hauteurs |
-| Bloc 2 | BatchNorm, ReLU, MaxPool, dropout 0,10 | Continuer l’extraction de motifs |
-| Convolution 3 | 64 filtres, noyau 3 x 3 | Raffiner les motifs appris |
-| Bloc 3 | BatchNorm, ReLU, MaxPool, dropout 0,15 | Réduire le surapprentissage |
-| Regroupement global | Moyenne globale des cartes | Résumer les motifs sans dépendre d’une position exacte |
-| Couche dense | 128 neurones, ReLU, régularisation L2 | Préparer la décision finale |
-| Dropout final | Taux 0,25 | Réduire le surapprentissage |
-| Sortie | Softmax sur 36 classes | Produire une probabilité par classe d’accord |
+Les extraits ci-dessous reprennent les couches construites dans le code
+d’entraînement. `input_shape` correspond à la forme d’un exemple Chroma CQT et
+`label_count` vaut `36` pour les accords actuellement pris en charge.
+
+#### Entrée
+
+Cette couche déclare la forme attendue par le réseau. Chaque exemple correspond
+à un Chroma CQT sous forme de tenseur `temps x 12 hauteurs x 1 canal`; le modèle
+ne travaille donc pas directement sur l’onde audio brute.
+
+```python
+model = Sequential(name="cnn_chords")
+model.add(tf.keras.Input(shape=input_shape))
+```
+
+#### Normalisation
+
+La normalisation stabilise les valeurs avant les convolutions. Elle est adaptée
+sur les données d’entraînement augmentées, afin que l’échelle des
+caractéristiques soit apprise uniquement à partir du train.
+
+```python
+normalizer = Normalization(axis=-1)
+normalizer.adapt(x_train_aug)
+model.add(normalizer)
+```
+
+#### Premier bloc convolutionnel
+
+Le premier bloc cherche des motifs qui couvrent toute la dimension chromatique.
+Le noyau `3 x 12` observe une courte fenêtre temporelle tout en regardant les
+12 hauteurs, ce qui convient bien à la structure d’un accord.
+
+```python
+model.add(Conv2D(32, (3, 12), padding="same", kernel_initializer="he_uniform"))
+model.add(BatchNormalization())
+model.add(Activation("relu"))
+model.add(MaxPool2D((2, 1)))
+model.add(Dropout(0.10))
+```
+
+#### Deuxième bloc convolutionnel
+
+Le deuxième bloc augmente la capacité du modèle avec `64` filtres. Le noyau
+`3 x 3` apprend des relations plus locales entre les frames temporelles et les
+hauteurs chromatiques.
+
+```python
+model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer="he_uniform"))
+model.add(BatchNormalization())
+model.add(Activation("relu"))
+model.add(MaxPool2D((2, 1)))
+model.add(Dropout(0.10))
+```
+
+#### Troisième bloc convolutionnel
+
+Le troisième bloc conserve `64` filtres pour raffiner les motifs déjà extraits.
+Le dropout passe à `0,15`, car le modèle est plus profond à ce stade et le risque
+de surapprentissage augmente.
+
+```python
+model.add(Conv2D(64, (3, 3), padding="same", kernel_initializer="he_uniform"))
+model.add(BatchNormalization())
+model.add(Activation("relu"))
+model.add(MaxPool2D((2, 1)))
+model.add(Dropout(0.15))
+```
+
+#### Regroupement global
+
+`GlobalAveragePooling2D` transforme les cartes de caractéristiques en vecteur
+compact. Cette étape résume les motifs détectés sans imposer qu’ils apparaissent
+à une position temporelle précise.
+
+```python
+model.add(GlobalAveragePooling2D())
+```
+
+#### Couche dense
+
+La couche dense combine les motifs extraits par les convolutions. Elle contient
+`128` neurones avec activation ReLU, initialisation He et régularisation L2 pour
+limiter les poids trop grands.
+
+```python
+model.add(
+    Dense(
+        128,
+        activation="relu",
+        kernel_initializer="he_uniform",
+        kernel_regularizer=l2(1e-4),
+    )
+)
+```
+
+#### Dropout final
+
+Ce dropout ignore aléatoirement `25 %` des activations de la couche dense pendant
+l’entraînement. Il oblige le modèle à ne pas dépendre d’un petit nombre de
+signaux internes.
+
+```python
+model.add(Dropout(0.25))
+```
+
+#### Sortie
+
+La sortie contient une unité par classe d’accord. L’activation softmax transforme
+les scores en probabilités, ce qui permet de choisir l’accord le plus probable
+et d’inspecter les alternatives.
+
+```python
+model.add(Dense(label_count, activation="softmax"))
+```
+
+#### Compilation
+
+La compilation fixe la règle d’apprentissage : Adam optimise la perte de
+classification multi-classe, et `accuracy` suit la proportion de prédictions
+correctes pendant l’entraînement et la validation.
+
+```python
+model.compile(
+    optimizer=Adam(learning_rate=0.001),
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"],
+)
+```
 
 ```mermaid
 flowchart TD
-    A["Fichier WAV"] --> B["Préparation audio<br/>mono, durée cible, fréquence fixe"]
-    B --> C["Chroma CQT<br/>temps x 12 hauteurs x 1 canal"]
-    C --> D["Transposition<br/>décalage des hauteurs et correction de l’étiquette"]
-    D --> E["Normalisation"]
-
-    E --> F["Bloc 1<br/>Conv2D 32, noyau 3 x 12<br/>BatchNorm, ReLU, MaxPool, Dropout 0,10"]
-    F --> G["Bloc 2<br/>Conv2D 64, noyau 3 x 3<br/>BatchNorm, ReLU, MaxPool, Dropout 0,10"]
-    G --> H["Bloc 3<br/>Conv2D 64, noyau 3 x 3<br/>BatchNorm, ReLU, MaxPool, Dropout 0,15"]
-
-    H --> I["Regroupement global"]
-    I --> J["Dense 128<br/>ReLU, L2, Dropout 0,25"]
-    J --> K["Softmax<br/>36 classes"]
+    A["Fichiers WAV annotés"] --> B["Préparation audio"]
+    B --> C["Extraction Chroma CQT"]
+    C --> D["Séparation train / validation / test"]
+    D --> E["Augmentation du train<br/>transposition + correction des étiquettes"]
+    E --> F["CNN de classification"]
+    D --> G["Validation et test gardés à part"]
+    F --> H["Prédiction softmax<br/>36 classes d'accords"]
+    G --> I["Métriques<br/>loss, accuracy, F1 macro, rapport"]
+    H --> I
 ```
 
-Le modèle est entraîné avec Adam, une perte de classification multi-classe et
-l’exactitude comme métrique principale. Des mécanismes d’arrêt anticipé, de
-réduction du taux d’apprentissage et de sauvegarde du meilleur modèle sont
-utilisés pendant l’entraînement.
+L’entraînement utilise Adam avec un taux d’apprentissage initial de `0,001`, une
+perte `sparse_categorical_crossentropy` et une taille de batch de `32`. Le nombre
+maximal d’époques est `60`, mais l’entraînement peut s’arrêter plus tôt si la
+perte de validation ne s’améliore plus.
+
+Les garde-fous d’apprentissage sont les suivants :
+
+* arrêt anticipé sur `val_loss`, avec patience `8`, restauration des meilleurs
+  poids et amélioration minimale `0,0001` ;
+* réduction du taux d’apprentissage sur plateau de validation, facteur `0,3`,
+  patience `4`, minimum `0,000001` ;
+* sauvegarde automatique du meilleur modèle selon `val_loss` ;
+* journal CSV de l’historique d’entraînement ;
+* répertoire TensorBoard pour inspecter l’exécution si nécessaire.
 
 ## Résultats d’essai
 
-Le projet sauvegarde les artefacts nécessaires pour comparer les expériences :
+Le pipeline produit des artefacts qui permettent de comparer les expériences et
+de vérifier exactement ce qui a été entraîné :
 
-* modèle entraîné ;
-* paramètres de l’exécution ;
-* historique d’entraînement ;
-* signature calculée à partir du jeu de données et de la configuration.
+| Artefact | Chemin | Utilité |
+| --- | --- | --- |
+| Modèle entraîné | `logs/models/<signature>/best_model.keras` | Recharger le meilleur modèle sauvegardé pendant l’entraînement |
+| Paramètres | `logs/models/<signature>/params.json` | Garder la configuration, les chemins, les classes et les signatures de données |
+| Historique | `logs/models/<signature>/training_log.csv` | Revoir la perte et l’exactitude à chaque époque |
+| TensorBoard | `logs/models/<signature>/tensorboard/` | Inspecter l’exécution avec des outils de visualisation |
 
 Cette signature n’est pas écrite en dur dans le README, car elle dépend des
 données et des paramètres du moment. Si le jeu de données, les séparations ou les
 hyperparamètres changent, une nouvelle signature peut être produite.
 
-Les métriques suivies sont :
+Les métriques imprimées par le pipeline sont :
 
-* perte d’entraînement ;
-* exactitude d’entraînement ;
-* perte de validation ;
-* exactitude de validation ;
-* perte de test ;
-* exactitude de test ;
-* F1 macro ;
-* rapport de classification.
+| Métrique | Où elle est calculée | Interprétation |
+| --- | --- | --- |
+| `loss` | Entraînement et validation, à chaque époque | Erreur optimisée par le réseau. Une baisse indique que le modèle ajuste mieux les exemples. |
+| `accuracy` | Entraînement et validation, à chaque époque | Proportion de prédictions correctes. Elle est simple à lire mais peut masquer des classes faibles. |
+| `test_loss` | Test final | Perte sur les fichiers jamais utilisés pour apprendre ou régler l’entraînement. |
+| `test_accuracy` | Test final | Proportion globale de fichiers test correctement classés. |
+| `F1 macro` | Test final | Moyenne du F1 par classe, sans favoriser les classes plus nombreuses. Elle est importante pour vérifier l’équilibre entre accords. |
+| Rapport de classification | Test final | Précision, rappel et F1 pour chaque accord. Il sert à repérer les classes problématiques. |
 
 <p align="center">
   <img src="docs/images/training-curves.png" alt="Courbes d’entraînement" width="100%">
 </p>
 
-Les courbes d’entraînement montrent que l’exactitude augmente et que la perte
-diminue sur l’entraînement comme sur la validation. Elles servent à repérer un
-éventuel surapprentissage ou un problème de convergence.
+Les courbes d’entraînement doivent être lues en comparant entraînement et
+validation. Une bonne évolution attendue est une baisse de `loss` et une hausse
+de `accuracy` sur les deux courbes. Si l’entraînement s’améliore alors que la
+validation stagne ou se dégrade, le modèle commence probablement à surapprendre.
+Si les deux courbes restent mauvaises, le problème vient plutôt des données, des
+caractéristiques, de l’architecture ou des hyperparamètres.
 
 <p align="center">
   <img src="docs/images/confusion-matrix.png" alt="Matrice de confusion" width="75%">
@@ -271,12 +424,23 @@ diminue sur l’entraînement comme sur la validation. Elles servent à repérer
 
 La matrice de confusion permet de voir quelles classes sont bien reconnues et
 quelles classes risquent d’être confondues. Une diagonale marquée indique que le
-modèle prédit majoritairement la bonne classe pendant l’essai représenté.
+modèle prédit majoritairement la bonne classe. Les valeurs hors diagonale sont
+les erreurs à inspecter en priorité : elles montrent les accords que le modèle
+confond, par exemple deux fondamentales proches ou deux qualités d’accord mal
+séparées.
 
 Les métriques exactes de test ne sont pas recopiées ici afin d’éviter de figer un
 résultat qui pourrait ne plus correspondre au dernier état du jeu de données. Il
 faut relancer le scénario d’exécution pour obtenir les valeurs correspondant à
-l’état actuel du projet.
+l’état actuel du projet :
+
+```bash
+uv run python main.py
+```
+
+Le pipeline affiche alors le nombre de fichiers, le nombre de classes, la
+signature de l’exécution, `Test accuracy`, `Test loss`, `F1 macro` et le rapport
+de classification complet.
 
 ## Problèmes rencontrés
 
