@@ -15,11 +15,13 @@ données, son architecture, ses résultats d’essai et ses limites actuelles.
 * [Méthode générale](#méthode-générale)
 * [Jeu de données](#jeu-de-données)
 * [Architecture logicielle](#architecture-logicielle)
+* [Notebook de démonstration](#notebook-de-démonstration)
 * [Architecture du modèle](#architecture-du-modèle)
 * [Résultats d’essai](#résultats-dessai)
 * [Problèmes rencontrés](#problèmes-rencontrés)
 * [Installation et commandes](#installation-et-commandes)
 * [Limites et améliorations possibles](#limites-et-améliorations-possibles)
+* [Notice sur l’utilisation de l’IA générative](#notice-sur-lutilisation-de-lia-générative)
 
 ## Objectif
 
@@ -90,7 +92,7 @@ flowchart TD
     J --> G
 ```
 
-Le fichier musica.toml centralise les paramètres importants :
+Le fichier `musica.toml` centralise les paramètres importants :
 
 * chemins des données et des artefacts ;
 * durée audio cible ;
@@ -102,7 +104,7 @@ Le fichier musica.toml centralise les paramètres importants :
 
 ## Jeu de données
 
-Le jeu de données est organisé dans le dossier audio/chords. Il peut contenir :
+Le jeu de données est organisé dans le dossier `audio/chords`. Il peut contenir :
 
 * des accords générés proprement ;
 * des accords bruités ;
@@ -116,24 +118,38 @@ Les classes sont construites avec :
 * 3 qualités d’accord : majeur, mineur et diminué ;
 * 36 classes au total.
 
-Lors de nos essais, nous avons utilisé environ 3 900 fichiers WAV. Ce nombre
-n’est pas une valeur fixe du projet : il dépend des fichiers générés, des
-augmentations lancées et des données locales disponibles.
+Lors du dernier run inspecté, le scénario de modélisation a utilisé 3 924
+fichiers WAV : 972 fichiers propres, 972 fichiers bruités, 1 944 variantes
+réalistes et 36 enregistrements locaux. Ce nombre n’est pas une valeur fixe du
+projet : il dépend des fichiers générés, des augmentations lancées et des
+données locales disponibles.
 
-La répartition utilisée pendant ces essais était la suivante :
+La répartition utilisée pendant ce run par `uv run python main.py` était la
+suivante :
 
-| Séparation | Rôle | Proportion utilisée lors des essais |
-| --- | --- | --- |
-| Entraînement | Apprendre les motifs audio associés aux accords | environ 70,6 % |
-| Validation | Suivre la généralisation pendant l’entraînement | environ 14,7 % |
-| Test | Évaluer le modèle sur des fichiers non utilisés pendant l’apprentissage | environ 14,7 % |
+| Séparation | Rôle | Fichiers | Proportion |
+| --- | --- | ---: | ---: |
+| Entraînement | Apprendre les motifs audio associés aux accords | 2 772 | environ 70,6 % |
+| Validation | Suivre la généralisation pendant l’entraînement | 576 | environ 14,7 % |
+| Test | Évaluer le modèle sur des fichiers non utilisés pendant l’apprentissage | 576 | environ 14,7 % |
+
+Cette répartition correspond au split stratifié de modélisation, configuré par
+`val_ratio = 0.15` et `test_ratio = 0.15` dans `musica.toml`. Elle est différente
+du manifest global produit par `uv run musica build-manifest`, qui écrit
+`audio/manifest.csv` avec les ratios `80/10/10` configurés dans la section
+`[manifest]`.
 
 <p align="center">
-  <img src="docs/images/class-distribution-by-split.png" alt="Distribution des classes par séparation" width="100%">
+  <img src="docs/images/notebook-dataset-overview.png" alt="Résumé du dataset, des features, des sources et des qualités d'accord" width="100%">
 </p>
 
-La distribution des classes permet de vérifier que les accords restent équilibrés
-entre entraînement, validation et test pendant les essais.
+<p align="center">
+  <img src="docs/images/notebook-split-distribution.png" alt="Distribution stratifiée des classes par séparation" width="100%">
+</p>
+
+Ces graphiques permettent de vérifier le volume du dataset, la provenance des
+fichiers audio, la répartition des qualités d’accord et l’équilibre des classes
+entre entraînement, validation et test.
 
 Les enregistrements externes, les fichiers WAV synthétisés et la SoundFont SF2
 ne sont pas inclus dans le dépôt, car ils sont trop lourds pour être versionnés.
@@ -178,6 +194,68 @@ Cette organisation évite que la génération des données, l’entraînement et
 l’analyse des résultats soient mélangés dans un même bloc de code. Elle rend
 aussi les expériences plus faciles à relancer et à comparer.
 
+## Notebook de démonstration
+
+Le notebook `musica.ipynb` est maintenant le support principal pour présenter le
+pipeline de modélisation. Il est conçu comme une démo technique lisible : les
+cellules restent courtes, les analyses sont visuelles et les utilitaires sont
+déplacés dans `notebook_helpers.py` pour éviter de gonfler le notebook.
+
+Le notebook couvre les étapes suivantes :
+
+1. chargement de la configuration `musica.toml` ;
+2. préparation des données avec split stratifié ;
+3. audit du dataset par source, qualité d’accord et séparation ;
+4. visualisation d’un signal audio et de sa feature Chroma CQT ;
+5. chargement du modèle en cache ou entraînement si le cache est absent ;
+6. affichage de l’architecture du modèle avec `model.summary()` ;
+7. courbes d’entraînement, loss, accuracy et learning rate ;
+8. métriques de test, matrice de confusion normalisée et analyse des erreurs ;
+9. rapport de classification sous forme de DataFrame ;
+10. prédictions top-k sur les fichiers du dossier `examples/`.
+
+Le helper `notebook_helpers.py` centralise les fonctions de visualisation et
+d’analyse utilisées par le notebook : tableaux, graphiques du dataset, courbes
+d’entraînement, matrice de confusion, DataFrame du rapport de classification et
+graphiques de prédiction.
+
+Les principaux graphiques exportés depuis le notebook sont versionnés dans
+`docs/images/` :
+
+| Graphique | Fichier | Ce qu’il montre |
+| --- | --- | --- |
+| Vue dataset | `docs/images/notebook-dataset-overview.png` | Volume global, features extraites, sources audio et qualités d’accord |
+| Splits | `docs/images/notebook-split-distribution.png` | Répartition train/validation/test et contrôle stratifié par classe |
+| Audio + feature | `docs/images/notebook-audio-chroma.png` | Onde audio d’un exemple et représentation Chroma CQT utilisée par le CNN |
+| Courbes | `docs/images/notebook-training-curves.png` | Accuracy, loss et learning rate du run |
+| Évaluation | `docs/images/notebook-test-metrics.png` | Accuracy, F1 macro et loss sur le test |
+| Confusion | `docs/images/notebook-confusion-normalized.png` | Matrice de confusion normalisée |
+| Rapport | `docs/images/notebook-classification-report.png` | Rapport de classification sous forme de tableau |
+| Erreurs | `docs/images/notebook-error-analysis.png` | Classes les plus faibles et principales confusions |
+| Prédictions | `docs/images/notebook-example-predictions.png` | Top-k sur les fichiers WAV du dossier `examples/` |
+
+<p align="center">
+  <img src="docs/images/notebook-test-metrics.png" alt="Scores de généralisation du notebook" width="80%">
+</p>
+
+<p align="center">
+  <img src="docs/images/notebook-example-predictions.png" alt="Prédictions top-k sur les fichiers audio d'exemple" width="80%">
+</p>
+
+Pour ouvrir le notebook avec les dépendances du projet, il faut utiliser le
+kernel Python de l’environnement `uv`. Une option pratique est d’enregistrer ce
+kernel, puis d’ouvrir `musica.ipynb` dans Jupyter :
+
+```bash
+uv run python -m ipykernel install --user --name musica --display-name "Musica"
+jupyter lab musica.ipynb
+```
+
+Si un environnement Jupyter est déjà configuré, il suffit de sélectionner le
+kernel `Musica` ou le Python de `.venv`. L’exécution du notebook réutilise le
+cache modèle existant tant que la signature des données et des paramètres ne
+change pas.
+
 ## Architecture du modèle
 
 Le modèle traite le problème comme une classification multi-classe : pour chaque
@@ -198,7 +276,7 @@ représentation est adaptée au problème, car un accord est principalement déf
 par des relations entre hauteurs plutôt que par la forme brute de l’onde audio.
 
 <p align="center">
-  <img src="docs/images/chroma-cqt-example.png" alt="Exemple de caractéristique Chroma CQT" width="75%">
+  <img src="docs/images/notebook-audio-chroma.png" alt="Signal audio et représentation Chroma CQT d'un exemple" width="85%">
 </p>
 
 <p align="center">
@@ -346,7 +424,7 @@ correctes pendant l’entraînement et la validation.
 
 ```python
 model.compile(
-    optimizer=Adam(learning_rate=0.001),
+    optimizer=Adam(learning_rate=self.config.learning_rate),
     loss="sparse_categorical_crossentropy",
     metrics=["accuracy"],
 )
@@ -365,8 +443,9 @@ flowchart TD
     H --> I
 ```
 
-L’entraînement utilise Adam avec un taux d’apprentissage initial de `0,001`, une
-perte `sparse_categorical_crossentropy` et une taille de batch de `32`. Le nombre
+L’entraînement utilise Adam avec le taux d’apprentissage défini dans
+`musica.toml` (`0,001` dans la configuration actuelle), une perte
+`sparse_categorical_crossentropy` et une taille de batch de `32`. Le nombre
 maximal d’époques est `60`, mais l’entraînement peut s’arrêter plus tôt si la
 perte de validation ne s’améliore plus.
 
@@ -391,10 +470,13 @@ de vérifier exactement ce qui a été entraîné :
 | Paramètres | `logs/models/<signature>/params.json` | Garder la configuration, les chemins, les classes et les signatures de données |
 | Historique | `logs/models/<signature>/training_log.csv` | Revoir la perte et l’exactitude à chaque époque |
 | TensorBoard | `logs/models/<signature>/tensorboard/` | Inspecter l’exécution avec des outils de visualisation |
+| Notebook | `musica.ipynb` | Lire et rejouer la démonstration complète avec les graphiques inline |
+| Helpers notebook | `notebook_helpers.py` | Garder les fonctions d’analyse et d’affichage hors du notebook |
 
-Cette signature n’est pas écrite en dur dans le README, car elle dépend des
-données et des paramètres du moment. Si le jeu de données, les séparations ou les
-hyperparamètres changent, une nouvelle signature peut être produite.
+Le run inspecté dans le notebook correspond à la signature `bddbd88ac5d1`. Cette
+signature dépend des données et des paramètres du moment. Si le jeu de données,
+les séparations ou les hyperparamètres changent, une nouvelle signature peut être
+produite.
 
 Les métriques imprimées par le pipeline sont :
 
@@ -405,10 +487,10 @@ Les métriques imprimées par le pipeline sont :
 | `test_loss` | Test final | Perte sur les fichiers jamais utilisés pour apprendre ou régler l’entraînement. |
 | `test_accuracy` | Test final | Proportion globale de fichiers test correctement classés. |
 | `F1 macro` | Test final | Moyenne du F1 par classe, sans favoriser les classes plus nombreuses. Elle est importante pour vérifier l’équilibre entre accords. |
-| Rapport de classification | Test final | Précision, rappel et F1 pour chaque accord. Il sert à repérer les classes problématiques. |
+| Rapport de classification | Test final | Précision, rappel, F1 et support pour chaque accord. Dans le notebook, il est affiché sous forme de DataFrame. |
 
 <p align="center">
-  <img src="docs/images/training-curves.png" alt="Courbes d’entraînement" width="100%">
+  <img src="docs/images/notebook-training-curves.png" alt="Courbes d’entraînement, validation et learning rate" width="100%">
 </p>
 
 Les courbes d’entraînement doivent être lues en comparant entraînement et
@@ -419,20 +501,38 @@ Si les deux courbes restent mauvaises, le problème vient plutôt des données, 
 caractéristiques, de l’architecture ou des hyperparamètres.
 
 <p align="center">
-  <img src="docs/images/confusion-matrix.png" alt="Matrice de confusion" width="75%">
+  <img src="docs/images/notebook-confusion-normalized.png" alt="Matrice de confusion normalisée" width="80%">
 </p>
 
 La matrice de confusion permet de voir quelles classes sont bien reconnues et
-quelles classes risquent d’être confondues. Une diagonale marquée indique que le
-modèle prédit majoritairement la bonne classe. Les valeurs hors diagonale sont
+quelles classes risquent d’être confondues. Le notebook affiche une matrice
+normalisée pour lire les erreurs en proportion de chaque vraie classe, puis un
+graphique des confusions les plus importantes. Une diagonale marquée indique que
+le modèle prédit majoritairement la bonne classe. Les valeurs hors diagonale sont
 les erreurs à inspecter en priorité : elles montrent les accords que le modèle
 confond, par exemple deux fondamentales proches ou deux qualités d’accord mal
 séparées.
 
-Les métriques exactes de test ne sont pas recopiées ici afin d’éviter de figer un
-résultat qui pourrait ne plus correspondre au dernier état du jeu de données. Il
-faut relancer le scénario d’exécution pour obtenir les valeurs correspondant à
-l’état actuel du projet :
+Pour le run `bddbd88ac5d1`, le notebook exécuté sur le split test de 576 exemples
+affiche les résultats suivants :
+
+| Métrique test | Valeur |
+| --- | ---: |
+| Accuracy | 0,9948 |
+| Loss | 0,0380 |
+| F1 macro | 0,9948 |
+
+<p align="center">
+  <img src="docs/images/notebook-classification-report.png" alt="Rapport de classification sous forme de DataFrame" width="80%">
+</p>
+
+<p align="center">
+  <img src="docs/images/notebook-error-analysis.png" alt="Analyse des classes difficiles et des principales confusions" width="100%">
+</p>
+
+Ces valeurs décrivent l’état du dataset et des paramètres au moment du run. Il
+faut réexécuter le notebook ou le scénario d’entraînement pour obtenir les
+valeurs correspondant à un nouvel état du projet :
 
 ```bash
 uv run python main.py
@@ -440,7 +540,9 @@ uv run python main.py
 
 Le pipeline affiche alors le nombre de fichiers, le nombre de classes, la
 signature de l’exécution, `Test accuracy`, `Test loss`, `F1 macro` et le rapport
-de classification complet.
+de classification complet. Le notebook ajoute en plus les graphiques de synthèse,
+la matrice de confusion normalisée, l’analyse des erreurs et les prédictions
+top-k sur les fichiers d’exemple.
 
 ## Problèmes rencontrés
 
@@ -472,7 +574,7 @@ uv sync --extra dev
 ```
 
 FluidSynth est optionnel. Si FluidSynth et la SoundFont
-assets/soundfonts/FluidR3_GM.sf2 sont disponibles, le rendu automatique les
+`assets/soundfonts/FluidR3_GM.sf2` sont disponibles, le rendu automatique les
 utilise. Sinon, la génération WAV peut passer par PrettyMIDI.
 
 1. Générer des WAV propres :
@@ -512,7 +614,14 @@ uv run musica build-manifest --output-path audio/manifest.csv
 uv run python main.py
 ```
 
-7. Lancer les tests :
+7. Ouvrir le notebook de démonstration :
+
+```bash
+uv run python -m ipykernel install --user --name musica --display-name "Musica"
+jupyter lab musica.ipynb
+```
+
+8. Lancer les tests :
 
 ```bash
 uv run pytest
@@ -530,8 +639,8 @@ Le projet reste un prototype. Les principales limites sont :
 
 Les prochaines améliorations seraient d’ajouter davantage d’enregistrements
 réels, d’étendre les familles d’accords, de tester une architecture temporelle
-plus riche et de produire automatiquement un rapport d’évaluation à chaque
-exécution.
+plus riche et de produire automatiquement un rapport d’évaluation exportable à
+partir du notebook.
 
 ## Notice sur l’utilisation de l’IA générative
 
