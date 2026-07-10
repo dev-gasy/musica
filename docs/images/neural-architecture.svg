@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="560" viewBox="0 0 1300 560" role="img" aria-labelledby="title desc">
+  <title id="title">Architecture neuronale simplifiee du modele CNN</title>
+  <desc id="desc">Schema simplifie du reseau de reconnaissance d'accords avec les nombres exacts : 12 valeurs Chroma CQT, normalisation, 32 filtres, 64 filtres, 64 filtres, 128 neurones denses et 36 classes de sortie.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="135%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect x="30" y="30" width="1240" height="500" rx="10" fill="#ffffff" filter="url(#shadow)"/>
+  <text x="70" y="86" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#111827">Architecture neuronale CNN</text>
+  <text x="70" y="120" font-family="Arial, sans-serif" font-size="16" fill="#64748b">Reconnaissance d'accords avec Chroma CQT</text>
+
+  <g stroke="#38bdf8" stroke-width="1.05" stroke-opacity="0.28" stroke-linecap="round">
+    <line x1="132" y1="210" x2="268" y2="210"/>
+    <line x1="132" y1="210" x2="268" y2="255"/>
+    <line x1="132" y1="210" x2="268" y2="300"/>
+    <line x1="132" y1="210" x2="268" y2="345"/>
+    <line x1="132" y1="255" x2="268" y2="210"/>
+    <line x1="132" y1="255" x2="268" y2="255"/>
+    <line x1="132" y1="255" x2="268" y2="300"/>
+    <line x1="132" y1="255" x2="268" y2="345"/>
+    <line x1="132" y1="300" x2="268" y2="210"/>
+    <line x1="132" y1="300" x2="268" y2="255"/>
+    <line x1="132" y1="300" x2="268" y2="300"/>
+    <line x1="132" y1="300" x2="268" y2="345"/>
+    <line x1="132" y1="345" x2="268" y2="210"/>
+    <line x1="132" y1="345" x2="268" y2="255"/>
+    <line x1="132" y1="345" x2="268" y2="300"/>
+    <line x1="132" y1="345" x2="268" y2="345"/>
+
+    <line x1="312" y1="210" x2="448" y2="210"/>
+    <line x1="312" y1="210" x2="448" y2="255"/>
+    <line x1="312" y1="210" x2="448" y2="300"/>
+    <line x1="312" y1="210" x2="448" y2="345"/>
+    <line x1="312" y1="255" x2="448" y2="210"/>
+    <line x1="312" y1="255" x2="448" y2="255"/>
+    <line x1="312" y1="255" x2="448" y2="300"/>
+    <line x1="312" y1="255" x2="448" y2="345"/>
+    <line x1="312" y1="300" x2="448" y2="210"/>
+    <line x1="312" y1="300" x2="448" y2="255"/>
+    <line x1="312" y1="300" x2="448" y2="300"/>
+    <line x1="312" y1="300" x2="448" y2="345"/>
+    <line x1="312" y1="345" x2="448" y2="210"/>
+    <line x1="312" y1="345" x2="448" y2="255"/>
+    <line x1="312" y1="345" x2="448" y2="300"/>
+    <line x1="312" y1="345" x2="448" y2="345"/>
+
+    <line x1="492" y1="210" x2="628" y2="210"/>
+    <line x1="492" y1="210" x2="628" y2="255"/>
+    <line x1="492" y1="210" x2="628" y2="300"/>
+    <line x1="492" y1="210" x2="628" y2="345"/>
+    <line x1="492" y1="255" x2="628" y2="210"/>
+    <line x1="492" y1="255" x2="628" y2="255"/>
+    <line x1="492" y1="255" x2="628" y2="300"/>
+    <line x1="492" y1="255" x2="628" y2="345"/>
+    <line x1="492" y1="300" x2="628" y2="210"/>
+    <line x1="492" y1="300" x2="628" y2="255"/>
+    <line x1="492" y1="300" x2="628" y2="300"/>
+    <line x1="492" y1="300" x2="628" y2="345"/>
+    <line x1="492" y1="345" x2="628" y2="210"/>
+    <line x1="492" y1="345" x2="628" y2="255"/>
+    <line x1="492" y1="345" x2="628" y2="300"/>
+    <line x1="492" y1="345" x2="628" y2="345"/>
+
+    <line x1="672" y1="210" x2="808" y2="210"/>
+    <line x1="672" y1="210" x2="808" y2="255"/>
+    <line x1="672" y1="210" x2="808" y2="300"/>
+    <line x1="672" y1="210" x2="808" y2="345"/>
+    <line x1="672" y1="255" x2="808" y2="210"/>
+    <line x1="672" y1="255" x2="808" y2="255"/>
+    <line x1="672" y1="255" x2="808" y2="300"/>
+    <line x1="672" y1="255" x2="808" y2="345"/>
+    <line x1="672" y1="300" x2="808" y2="210"/>
+    <line x1="672" y1="300" x2="808" y2="255"/>
+    <line x1="672" y1="300" x2="808" y2="300"/>
+    <line x1="672" y1="300" x2="808" y2="345"/>
+    <line x1="672" y1="345" x2="808" y2="210"/>
+    <line x1="672" y1="345" x2="808" y2="255"/>
+    <line x1="672" y1="345" x2="808" y2="300"/>
+    <line x1="672" y1="345" x2="808" y2="345"/>
+
+    <line x1="852" y1="210" x2="988" y2="232"/>
+    <line x1="852" y1="210" x2="988" y2="278"/>
+    <line x1="852" y1="210" x2="988" y2="324"/>
+    <line x1="852" y1="255" x2="988" y2="232"/>
+    <line x1="852" y1="255" x2="988" y2="278"/>
+    <line x1="852" y1="255" x2="988" y2="324"/>
+    <line x1="852" y1="300" x2="988" y2="232"/>
+    <line x1="852" y1="300" x2="988" y2="278"/>
+    <line x1="852" y1="300" x2="988" y2="324"/>
+    <line x1="852" y1="345" x2="988" y2="232"/>
+    <line x1="852" y1="345" x2="988" y2="278"/>
+    <line x1="852" y1="345" x2="988" y2="324"/>
+
+    <line x1="1032" y1="232" x2="1168" y2="232"/>
+    <line x1="1032" y1="232" x2="1168" y2="278"/>
+    <line x1="1032" y1="232" x2="1168" y2="324"/>
+    <line x1="1032" y1="278" x2="1168" y2="232"/>
+    <line x1="1032" y1="278" x2="1168" y2="278"/>
+    <line x1="1032" y1="278" x2="1168" y2="324"/>
+    <line x1="1032" y1="324" x2="1168" y2="232"/>
+    <line x1="1032" y1="324" x2="1168" y2="278"/>
+    <line x1="1032" y1="324" x2="1168" y2="324"/>
+  </g>
+
+  <g font-family="Arial, sans-serif" text-anchor="middle">
+    <text x="110" y="165" font-size="16" font-weight="700" fill="#111827">Entrée</text>
+    <text x="290" y="165" font-size="16" font-weight="700" fill="#111827">Normalisation</text>
+    <text x="470" y="165" font-size="16" font-weight="700" fill="#111827">Conv 1</text>
+    <text x="650" y="165" font-size="16" font-weight="700" fill="#111827">Conv 2</text>
+    <text x="830" y="165" font-size="16" font-weight="700" fill="#111827">Conv 3</text>
+    <text x="1010" y="165" font-size="16" font-weight="700" fill="#111827">Dense</text>
+    <text x="1190" y="165" font-size="16" font-weight="700" fill="#111827">Sortie</text>
+  </g>
+
+  <g font-family="Arial, sans-serif" text-anchor="middle" font-size="13" fill="#475569">
+    <text x="110" y="395">12 valeurs</text>
+    <text x="110" y="414">Chroma CQT</text>
+    <text x="290" y="395">12 valeurs</text>
+    <text x="290" y="414">normalisées</text>
+    <text x="470" y="395">32 filtres</text>
+    <text x="470" y="414">noyau 3 x 12</text>
+    <text x="650" y="395">64 filtres</text>
+    <text x="650" y="414">noyau 3 x 3</text>
+    <text x="830" y="395">64 filtres</text>
+    <text x="830" y="414">noyau 3 x 3</text>
+    <text x="1010" y="395">128 neurones</text>
+    <text x="1010" y="414">ReLU</text>
+    <text x="1190" y="395">36 classes</text>
+    <text x="1190" y="414">Softmax</text>
+  </g>
+
+  <g>
+    <circle cx="110" cy="210" r="22" fill="#0f7cff"/>
+    <circle cx="110" cy="255" r="22" fill="#0f7cff"/>
+    <circle cx="110" cy="300" r="22" fill="#0f7cff"/>
+    <circle cx="110" cy="345" r="22" fill="#0f7cff"/>
+
+    <circle cx="290" cy="210" r="22" fill="#2dd4bf"/>
+    <circle cx="290" cy="255" r="22" fill="#2dd4bf"/>
+    <circle cx="290" cy="300" r="22" fill="#2dd4bf"/>
+    <circle cx="290" cy="345" r="22" fill="#2dd4bf"/>
+
+    <circle cx="470" cy="210" r="22" fill="#2dd4bf"/>
+    <circle cx="470" cy="255" r="22" fill="#2dd4bf"/>
+    <circle cx="470" cy="300" r="22" fill="#2dd4bf"/>
+    <circle cx="470" cy="345" r="22" fill="#2dd4bf"/>
+
+    <circle cx="650" cy="210" r="22" fill="#2dd4bf"/>
+    <circle cx="650" cy="255" r="22" fill="#2dd4bf"/>
+    <circle cx="650" cy="300" r="22" fill="#2dd4bf"/>
+    <circle cx="650" cy="345" r="22" fill="#2dd4bf"/>
+
+    <circle cx="830" cy="210" r="22" fill="#2dd4bf"/>
+    <circle cx="830" cy="255" r="22" fill="#2dd4bf"/>
+    <circle cx="830" cy="300" r="22" fill="#2dd4bf"/>
+    <circle cx="830" cy="345" r="22" fill="#2dd4bf"/>
+
+    <circle cx="1010" cy="232" r="22" fill="#14b8a6"/>
+    <circle cx="1010" cy="278" r="22" fill="#14b8a6"/>
+    <circle cx="1010" cy="324" r="22" fill="#14b8a6"/>
+
+    <circle cx="1190" cy="232" r="22" fill="#7aa2f7"/>
+    <circle cx="1190" cy="278" r="22" fill="#7aa2f7"/>
+    <circle cx="1190" cy="324" r="22" fill="#7aa2f7"/>
+  </g>
+</svg>

@@ -185,6 +185,10 @@ chaque classe de hauteur.
   <img src="docs/images/chroma-cqt-example.png" alt="Exemple de caractéristique Chroma CQT" width="75%">
 </p>
 
+<p align="center">
+  <img src="docs/images/neural-architecture.svg" alt="Architecture neuronale simplifiée du modèle CNN" width="100%">
+</p>
+
 Avant l’apprentissage, les exemples d’entraînement sont augmentés par
 transposition. Le tenseur Chroma CQT est décalé sur l’axe des hauteurs et
 l’étiquette est recalculée pour garder la bonne fondamentale. Cette augmentation
