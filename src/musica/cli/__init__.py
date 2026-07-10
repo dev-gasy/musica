@@ -22,7 +22,7 @@ from musica.augmentation.noise import (
 )
 from musica.augmentation.realism import augment_wav_dataset_with_realism
 from musica.augmentation.transpose import augment_wav_dataset_with_transposition
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 
 CommandHandler = Callable[[argparse.Namespace, MusicaConfig], None]
 

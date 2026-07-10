@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from musica.modeling.augmentation import TranspositionAugmenter
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 from musica.modeling.constants import NOTE_ALIASES, QUALITIES, ROOTS
 from musica.modeling.dataset import ChordDataset, DatasetSplit
 from musica.modeling.evaluation import ChordEvaluator, EvaluationResult

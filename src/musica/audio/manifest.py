@@ -10,7 +10,7 @@ from typing import Iterable
 
 import soundfile as sf
 
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 
 MANIFEST_FIELDS: tuple[str, ...] = (
     "path",

@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 
 from musica.logging import logger
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 from musica.modeling.features import FeatureExtractor
 
 

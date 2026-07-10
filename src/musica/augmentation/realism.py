@@ -17,7 +17,7 @@ from musica.audio.io import (
     read_audio,
     write_audio,
 )
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 
 DEFAULT_CONFIG = MusicaConfig()
 

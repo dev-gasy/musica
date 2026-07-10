@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from musica.audio.chords import generate_chord_wav_files, write_generated_audio_manifest
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 
 
 def main() -> None:

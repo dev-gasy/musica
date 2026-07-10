@@ -11,7 +11,7 @@ import numpy as np
 
 from musica.logging import logger
 from musica.modeling.augmentation import TranspositionAugmenter
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 from musica.modeling.constants import QUALITIES, ROOTS
 from musica.modeling.dataset import ChordDataset, DatasetSplit
 from musica.modeling.utils import stable_digest

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from musica.logging import logger
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 from musica.modeling.dataset import ChordDataset
 from musica.modeling.features import FeatureExtractor
 from musica.modeling.training import PreparedData

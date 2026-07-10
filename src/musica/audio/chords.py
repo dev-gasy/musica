@@ -14,7 +14,7 @@ import numpy as np
 import pretty_midi
 
 from musica.audio.io import fit_audio_length, write_audio
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 
 CHORD_PATTERNS: dict[str, list[int]] = {
     "maj": [0, 4, 7],

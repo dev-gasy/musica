@@ -9,7 +9,7 @@ from typing import Iterable
 import numpy as np
 
 from musica.logging import logger
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 from musica.modeling.constants import NOTE_ALIASES
 from musica.modeling.utils import label_sort_key, stable_digest
 

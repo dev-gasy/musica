@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from musica.logging import logger
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 from musica.modeling.dataset import ChordDataset
 
 

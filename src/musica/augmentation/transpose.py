@@ -17,7 +17,7 @@ from musica.audio.io import (
     write_audio as write_wav_audio,
 )
 from musica.audio.manifest import parse_chord_filename
-from musica.modeling.config import MusicaConfig
+from musica.config import MusicaConfig
 
 ROOTS: tuple[str, ...] = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 DEFAULT_CONFIG = MusicaConfig()
