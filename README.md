@@ -8,9 +8,9 @@ les prédictions sur des exemples audio.
 
 ## À lire
 
-- [Setup](SETUP.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
-- [Guide pédagogique](GUIDE.md)
+- [Setup](docs/SETUP.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Guide pédagogique](docs/GUIDE.md)
 - [Notebook](musica.ipynb)
 
 ## Setup rapide
@@ -51,6 +51,7 @@ l’utilise pour le rendu audio. Sinon, le rendu passe par PrettyMIDI.
 - `assets/noises/` : bruits WAV utilisés pour les augmentations.
 - `assets/recorded/` : enregistrements réels source.
 - `audio/chords/` : dataset local préparé par le setup.
+- `docs/` : guide pédagogique, setup détaillé, troubleshooting, images et exports.
 - `musica.ipynb` : démonstration.
 
 ## Commandes courantes

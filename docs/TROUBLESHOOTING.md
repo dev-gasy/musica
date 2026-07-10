@@ -222,4 +222,4 @@ uv run python main.py --audio-only
 uv run pytest
 ```
 
-Le setup complet est dans [docs/setup-env.md](SETUP.md).
+Le setup complet est dans [SETUP.md](SETUP.md).

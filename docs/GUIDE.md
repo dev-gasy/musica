@@ -137,11 +137,11 @@ du manifest global produit par `uv run musica build-manifest`, qui écrit
 `[manifest]`.
 
 <p align="center">
-  <img src="docs/images/notebook-dataset-overview.png" alt="Résumé du dataset, des features, des sources et des qualités d'accord" width="100%">
+  <img src="images/notebook-dataset-overview.png" alt="Résumé du dataset, des features, des sources et des qualités d'accord" width="100%">
 </p>
 
 <p align="center">
-  <img src="docs/images/notebook-split-distribution.png" alt="Distribution stratifiée des classes par séparation" width="100%">
+  <img src="images/notebook-split-distribution.png" alt="Distribution stratifiée des classes par séparation" width="100%">
 </p>
 
 Ces graphiques permettent de vérifier le volume du dataset, la provenance des
@@ -232,11 +232,11 @@ Les principaux graphiques exportés depuis le notebook sont versionnés dans
 | Prédictions     | `images/notebook-example-predictions.png`   | Top-k sur les fichiers WAV du dossier `examples/`                        |
 
 <p align="center">
-  <img src="docs/images/notebook-test-metrics.png" alt="Scores de généralisation du notebook" width="80%">
+  <img src="images/notebook-test-metrics.png" alt="Scores de généralisation du notebook" width="80%">
 </p>
 
 <p align="center">
-  <img src="docs/images/notebook-example-predictions.png" alt="Prédictions top-k sur les fichiers audio d'exemple" width="80%">
+  <img src="images/notebook-example-predictions.png" alt="Prédictions top-k sur les fichiers audio d'exemple" width="80%">
 </p>
 
 Pour ouvrir le notebook avec les dépendances du projet, il faut utiliser le
@@ -275,11 +275,11 @@ représentation est adaptée au problème, car un accord est principalement déf
 par des relations entre hauteurs plutôt que par la forme brute de l’onde audio.
 
 <p align="center">
-  <img src="docs/images/notebook-audio-chroma.png" alt="Signal audio et représentation Chroma CQT d'un exemple" width="85%">
+  <img src="images/notebook-audio-chroma.png" alt="Signal audio et représentation Chroma CQT d'un exemple" width="85%">
 </p>
 
 <p align="center">
-  <img src="docs/images/neural-architecture.svg" alt="Architecture neuronale simplifiée du modèle CNN" width="100%">
+  <img src="images/neural-architecture.svg" alt="Architecture neuronale simplifiée du modèle CNN" width="100%">
 </p>
 
 Le schéma ci-dessus montre le nombre exact d’éléments représentés par couche.
@@ -489,7 +489,7 @@ Les métriques imprimées par le pipeline sont :
 | Rapport de classification | Test final                                  | Précision, rappel, F1 et support pour chaque accord. Dans le notebook, il est affiché sous forme de DataFrame.                     |
 
 <p align="center">
-  <img src="docs/images/notebook-training-curves.png" alt="Courbes d’entraînement, validation et learning rate" width="100%">
+  <img src="images/notebook-training-curves.png" alt="Courbes d’entraînement, validation et learning rate" width="100%">
 </p>
 
 Les courbes d’entraînement doivent être lues en comparant entraînement et
@@ -500,7 +500,7 @@ Si les deux courbes restent mauvaises, le problème vient plutôt des données, 
 caractéristiques, de l’architecture ou des hyperparamètres.
 
 <p align="center">
-  <img src="docs/images/notebook-confusion-normalized.png" alt="Matrice de confusion normalisée" width="80%">
+  <img src="images/notebook-confusion-normalized.png" alt="Matrice de confusion normalisée" width="80%">
 </p>
 
 La matrice de confusion permet de voir quelles classes sont bien reconnues et
@@ -522,11 +522,11 @@ affiche les résultats suivants :
 | F1 macro      | 0,9948 |
 
 <p align="center">
-  <img src="docs/images/notebook-classification-report.png" alt="Rapport de classification sous forme de DataFrame" width="80%">
+  <img src="images/notebook-classification-report.png" alt="Rapport de classification sous forme de DataFrame" width="80%">
 </p>
 
 <p align="center">
-  <img src="docs/images/notebook-error-analysis.png" alt="Analyse des classes difficiles et des principales confusions" width="100%">
+  <img src="images/notebook-error-analysis.png" alt="Analyse des classes difficiles et des principales confusions" width="100%">
 </p>
 
 Ces valeurs décrivent l’état du dataset et des paramètres au moment du run. Il
