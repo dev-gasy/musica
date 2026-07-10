@@ -12,6 +12,13 @@ from urllib.request import Request, urlopen
 
 import numpy as np
 
+from musica.audio.io import (
+    list_wav_files,
+    match_sample_rate,
+    peak_limit,
+    read_audio,
+    write_audio,
+)
 from musica.modeling.config import MusicaConfig
 
 DEFAULT_CONFIG = MusicaConfig()
@@ -110,11 +117,11 @@ def noise_sources_from_urls(urls: list[str]) -> list[NoiseSource]:
 
 
 def download_noise_wavs(
-        output_dir: Path,
-        *,
-        sources: list[NoiseSource] | tuple[NoiseSource, ...] = DEFAULT_INTERNET_NOISES,
-        overwrite: bool = False,
-        manifest_path: Path | None = None,
+    output_dir: Path,
+    *,
+    sources: list[NoiseSource] | tuple[NoiseSource, ...] = DEFAULT_INTERNET_NOISES,
+    overwrite: bool = False,
+    manifest_path: Path | None = None,
 ) -> list[DownloadedNoise]:
     output_dir.mkdir(parents=True, exist_ok=True)
     downloaded: list[DownloadedNoise] = []
@@ -149,21 +156,21 @@ def download_url(url: str, output_path: Path) -> None:
 
 
 def augment_wav_dataset_with_noise(
-        input_dir: Path,
-        noise_dir: Path,
-        output_dir: Path,
-        *,
-        snrs_db: tuple[float, ...] = DEFAULT_CONFIG.noise_snrs_db,
-        mode: str = DEFAULT_CONFIG.noise_mode,
-        max_files: int | None = None,
-        random_seed: int = DEFAULT_CONFIG.seed,
-        manifest_path: Path | None = None,
+    input_dir: Path,
+    noise_dir: Path,
+    output_dir: Path,
+    *,
+    snrs_db: tuple[float, ...] = DEFAULT_CONFIG.noise_snrs_db,
+    mode: str = DEFAULT_CONFIG.noise_mode,
+    max_files: int | None = None,
+    random_seed: int = DEFAULT_CONFIG.seed,
+    manifest_path: Path | None = None,
 ) -> list[NoisyAudio]:
     if mode not in {"cycle", "all"}:
         raise ValueError("mode must be 'cycle' or 'all'")
 
-    source_files = sorted(path for path in input_dir.rglob("*.wav") if path.is_file())
-    noise_files = sorted(path for path in noise_dir.rglob("*.wav") if path.is_file())
+    source_files = list_wav_files(input_dir)
+    noise_files = list_wav_files(noise_dir)
     if max_files is not None:
         source_files = source_files[:max_files]
     if not source_files:
@@ -175,14 +182,9 @@ def augment_wav_dataset_with_noise(
     generated: list[NoisyAudio] = []
 
     for source_index, source_path in enumerate(source_files):
-        active_noise_files = (
-            noise_files if mode == "all" else [noise_files[source_index % len(noise_files)]]
-        )
         signal, sample_rate = read_audio(source_path)
-        for noise_path in active_noise_files:
-            noise, noise_sample_rate = read_audio(noise_path)
-            noise = match_sample_rate(noise, noise_sample_rate, sample_rate)
-            noise = match_channels(noise, signal)
+        for noise_path in noise_files_for_source(noise_files, mode, source_index):
+            noise = prepare_noise_for_signal(noise_path, signal, sample_rate)
 
             for snr_db in snrs_db:
                 rng = rng_for_mix(random_seed, source_path, noise_path, snr_db)
@@ -219,34 +221,24 @@ def augment_wav_dataset_with_noise(
     return generated
 
 
-def read_audio(path: Path) -> tuple[np.ndarray, int]:
-    import soundfile as sf
-
-    audio, sample_rate = sf.read(path, always_2d=True, dtype="float32")
-    return audio, sample_rate
-
-
-def write_audio(path: Path, audio: np.ndarray, sample_rate: int) -> None:
-    import soundfile as sf
-
-    sf.write(path, audio, sample_rate, subtype="PCM_16")
+def noise_files_for_source(
+    noise_files: list[Path],
+    mode: str,
+    source_index: int,
+) -> list[Path]:
+    if mode == "all":
+        return noise_files
+    return [noise_files[source_index % len(noise_files)]]
 
 
-def match_sample_rate(audio: np.ndarray, current_rate: int, target_rate: int) -> np.ndarray:
-    if current_rate == target_rate:
-        return audio
-
-    import librosa
-
-    channels = [
-        librosa.resample(
-            audio[:, channel],
-            orig_sr=current_rate,
-            target_sr=target_rate,
-        )
-        for channel in range(audio.shape[1])
-    ]
-    return np.stack(channels, axis=1).astype(np.float32)
+def prepare_noise_for_signal(
+    noise_path: Path,
+    signal: np.ndarray,
+    sample_rate: int,
+) -> np.ndarray:
+    noise, noise_sample_rate = read_audio(noise_path)
+    noise = match_sample_rate(noise, noise_sample_rate, sample_rate)
+    return match_channels(noise, signal)
 
 
 def match_channels(noise: np.ndarray, signal: np.ndarray) -> np.ndarray:
@@ -263,9 +255,9 @@ def match_channels(noise: np.ndarray, signal: np.ndarray) -> np.ndarray:
 
 
 def select_noise_segment(
-        noise: np.ndarray,
-        target_samples: int,
-        rng: np.random.Generator,
+    noise: np.ndarray,
+    target_samples: int,
+    rng: np.random.Generator,
 ) -> tuple[np.ndarray, int]:
     if len(noise) < target_samples:
         repeats = int(np.ceil(target_samples / len(noise)))
@@ -284,10 +276,7 @@ def mix_at_snr(signal: np.ndarray, noise: np.ndarray, snr_db: float) -> np.ndarr
 
     target_noise_rms = signal_rms / (10 ** (snr_db / 20.0))
     mixed = signal + (noise * (target_noise_rms / noise_rms))
-    peak = float(np.max(np.abs(mixed)))
-    if peak > 0.99:
-        mixed = mixed * (0.99 / peak)
-    return mixed.astype(np.float32)
+    return peak_limit(mixed).astype(np.float32)
 
 
 def rms(audio: np.ndarray) -> float:
@@ -295,10 +284,10 @@ def rms(audio: np.ndarray) -> float:
 
 
 def rng_for_mix(
-        random_seed: int,
-        source_path: Path,
-        noise_path: Path,
-        snr_db: float,
+    random_seed: int,
+    source_path: Path,
+    noise_path: Path,
+    snr_db: float,
 ) -> np.random.Generator:
     seed_material = f"{random_seed}:{source_path}:{noise_path}:{snr_db}"
     digest = hashlib.sha256(seed_material.encode("utf-8")).digest()
@@ -306,11 +295,11 @@ def rng_for_mix(
 
 
 def noisy_output_path(
-        input_dir: Path,
-        output_dir: Path,
-        source_path: Path,
-        noise_path: Path,
-        snr_db: float,
+    input_dir: Path,
+    output_dir: Path,
+    source_path: Path,
+    noise_path: Path,
+    snr_db: float,
 ) -> Path:
     relative_source = source_path.relative_to(input_dir)
     snr_label = format_snr_label(snr_db)
@@ -333,8 +322,8 @@ def safe_filename(value: str) -> str:
 
 
 def write_noise_download_manifest(
-        downloaded: list[DownloadedNoise],
-        manifest_path: Path,
+    downloaded: list[DownloadedNoise],
+    manifest_path: Path,
 ) -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with manifest_path.open("w", newline="") as file:
@@ -357,8 +346,8 @@ def write_noise_download_manifest(
 
 
 def write_noisy_audio_manifest(
-        generated: list[NoisyAudio],
-        manifest_path: Path,
+    generated: list[NoisyAudio],
+    manifest_path: Path,
 ) -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with manifest_path.open("w", newline="") as file:

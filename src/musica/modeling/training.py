@@ -3,20 +3,18 @@
 from __future__ import annotations
 
 import json
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from musica.logging import logger
 from musica.modeling.augmentation import TranspositionAugmenter
 from musica.modeling.config import MusicaConfig
 from musica.modeling.constants import QUALITIES, ROOTS
 from musica.modeling.dataset import ChordDataset, DatasetSplit
 from musica.modeling.utils import stable_digest
-
-LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -60,7 +58,12 @@ class ChordTrainer:
         self.project_root = Path.cwd() if project_root is None else project_root
         self.logs_dir = config.resolve_path(self.project_root, config.logs_dir)
 
-    def build_model(self, input_shape: tuple[int, ...], label_count: int, normalizer: Any) -> Any:
+    def build_model(
+        self,
+        input_shape: tuple[int, ...],
+        label_count: int,
+        normalizer: Any,
+    ) -> Any:
         import tensorflow as tf
         from tensorflow.keras import Sequential
         from tensorflow.keras.layers import (
@@ -114,7 +117,7 @@ class ChordTrainer:
             loss="sparse_categorical_crossentropy",
             metrics=["accuracy"],
         )
-        LOGGER.info("Modele CNN construit: input_shape=%s, classes=%s", input_shape, label_count)
+        logger.info("Modele CNN construit: input_shape={}, classes={}", input_shape, label_count)
         return model
 
     def training_params(self, split: DatasetSplit) -> dict[str, Any]:
@@ -153,25 +156,30 @@ class ChordTrainer:
 
     def signature(self, split: DatasetSplit) -> str:
         signature = stable_digest(self.training_params(split))[:12]
-        LOGGER.info("Signature du run: %s", signature)
+        logger.info("Signature du run: {}", signature)
         return signature
 
     def load_cached_model(self, signature: str) -> tuple[Any, Path, Path] | None:
         import tensorflow as tf
 
-        model_path = self.logs_dir / "models" / signature / "best_model.keras"
-        history_log_path = self.logs_dir / "models" / signature / "training_log.csv"
-        LOGGER.info("Verification du cache modele: %s", model_path)
+        model_path, history_log_path = self.cached_model_paths(signature)
+        logger.info("Verification du cache modele: {}", model_path)
         if not self.config.force_retrain and model_path.exists():
-            LOGGER.info("Cache hit: chargement de %s", model_path)
+            logger.info("Cache hit: chargement de {}", model_path)
             return tf.keras.models.load_model(model_path), model_path, history_log_path
 
-        legacy_model_path = self.config.resolve_path(self.project_root, self.config.legacy_model_path)
-        legacy_params_path = self.config.resolve_path(self.project_root, self.config.legacy_params_path)
-        if not self.config.force_retrain and legacy_model_path.exists() and legacy_params_path.exists():
+        legacy_model_path = self.config.resolve_path(
+            self.project_root,
+            self.config.legacy_model_path,
+        )
+        legacy_params_path = self.config.resolve_path(
+            self.project_root,
+            self.config.legacy_params_path,
+        )
+        if self.can_use_legacy_cache(legacy_model_path, legacy_params_path):
             legacy_signature = json.loads(legacy_params_path.read_text()).get("signature")
             if legacy_signature == signature:
-                LOGGER.info("Cache legacy hit: chargement de %s", legacy_model_path)
+                logger.info("Cache legacy hit: chargement de {}", legacy_model_path)
                 return (
                     tf.keras.models.load_model(legacy_model_path),
                     legacy_model_path,
@@ -179,10 +187,21 @@ class ChordTrainer:
                 )
 
         if self.config.force_retrain:
-            LOGGER.info("Cache ignore car force_retrain=true")
+            logger.info("Cache ignore car force_retrain=true")
         else:
-            LOGGER.info("Aucun modele en cache pour la signature %s", signature)
+            logger.info("Aucun modele en cache pour la signature {}", signature)
         return None
+
+    def cached_model_paths(self, signature: str) -> tuple[Path, Path]:
+        run_dir = self.logs_dir / "models" / signature
+        return run_dir / "best_model.keras", run_dir / "training_log.csv"
+
+    def can_use_legacy_cache(self, model_path: Path, params_path: Path) -> bool:
+        return (
+            not self.config.force_retrain
+            and model_path.exists()
+            and params_path.exists()
+        )
 
     def build_augmented_model(
         self,
@@ -196,7 +215,7 @@ class ChordTrainer:
         augmenter = TranspositionAugmenter()
         x_train_aug, y_train_aug = augmenter.augment(prepared.x_train, prepared.y_train)
 
-        LOGGER.info("Adaptation de la normalisation sur le train augmente")
+        logger.info("Adaptation de la normalisation sur le train augmente")
         normalizer = Normalization(axis=-1)
         normalizer.adapt(x_train_aug)
         model = self.build_model(
@@ -215,8 +234,13 @@ class ChordTrainer:
             history_log_path=run_dir / "training_log.csv",
         )
 
-    def write_training_metadata(self, signature: str, split: DatasetSplit, params_path: Path) -> None:
-        LOGGER.info("Ecriture des metadonnees du run: %s", params_path)
+    def write_training_metadata(
+        self,
+        signature: str,
+        split: DatasetSplit,
+        params_path: Path,
+    ) -> None:
+        logger.info("Ecriture des metadonnees du run: {}", params_path)
         params_path.write_text(
             json.dumps(
                 {"signature": signature, "params": self.training_params(split)},
@@ -288,8 +312,8 @@ class ChordTrainer:
         self.write_training_metadata(signature, prepared.split, artifacts.params_path)
 
         kwargs = fit_kwargs or {}
-        LOGGER.info(
-            "Debut entrainement: epochs=%s, batch_size=%s, run_dir=%s",
+        logger.info(
+            "Debut entrainement: epochs={}, batch_size={}, run_dir={}",
             self.config.epochs,
             self.config.batch_size,
             artifacts.run_dir,
@@ -303,7 +327,7 @@ class ChordTrainer:
             callbacks=self.training_callbacks(artifacts),
             **kwargs,
         )
-        LOGGER.info("Entrainement termine: meilleur modele=%s", artifacts.model_path)
+        logger.info("Entrainement termine: meilleur modele={}", artifacts.model_path)
         return TrainingResult(
             model=model,
             signature=signature,

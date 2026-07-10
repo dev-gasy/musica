@@ -100,6 +100,17 @@ def test_config_loads_sectioned_toml(tmp_path: Path) -> None:
     assert config.top_k == 4
 
 
+def test_config_coerces_path_values_with_pydantic() -> None:
+    config = MusicaConfig(dataset_dir="custom/chords")
+
+    assert config.dataset_dir == Path("custom/chords")
+
+
+def test_config_validates_direct_instantiation() -> None:
+    with pytest.raises(ValueError, match="greater than or equal to 1"):
+        MusicaConfig(epochs=0)
+
+
 def test_config_rejects_unknown_keys(tmp_path: Path) -> None:
     config_path = tmp_path / "musica.toml"
     config_path.write_text("seed = 0\nnot_a_config = true\n")
@@ -176,7 +187,10 @@ def test_training_signature_changes_with_callback_strategy(tmp_path: Path) -> No
     assert signature != changed_signature
 
 
-def test_train_or_load_cache_hit_does_not_fit(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_train_or_load_cache_hit_does_not_fit(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     config = MusicaConfig()
     dataset = ChordDataset(config, project_root=tmp_path)
     dataset.audio_paths = []

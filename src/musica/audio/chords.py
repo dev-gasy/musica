@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pretty_midi
 
+from musica.audio.io import fit_audio_length, write_audio
 from musica.modeling.config import MusicaConfig
 
 CHORD_PATTERNS: dict[str, list[int]] = {
@@ -91,12 +92,12 @@ def safe_key_name(root: str) -> str:
 
 
 def iter_chord_specs(
-        *,
-        octave_offsets: tuple[int, ...] = DEFAULT_CONFIG.octave_offsets,
-        velocities: tuple[int, ...] = DEFAULT_CONFIG.velocities,
-        durations: tuple[float, ...] = (DEFAULT_CONFIG.chord_duration,),
-        repetitions: int = DEFAULT_CONFIG.repetitions,
-        instrument_programs: dict[str, int] | None = None,
+    *,
+    octave_offsets: tuple[int, ...] = DEFAULT_CONFIG.octave_offsets,
+    velocities: tuple[int, ...] = DEFAULT_CONFIG.velocities,
+    durations: tuple[float, ...] = (DEFAULT_CONFIG.chord_duration,),
+    repetitions: int = DEFAULT_CONFIG.repetitions,
+    instrument_programs: dict[str, int] | None = None,
 ) -> list[ChordSpec]:
     if repetitions < 1:
         raise ValueError("repetitions must be at least 1")
@@ -127,16 +128,16 @@ def iter_chord_specs(
 
 
 def generate_chord_midi(
-        root: str,
-        quality: str,
-        instrument: str,
-        *,
-        duration: float = DEFAULT_CONFIG.chord_duration,
-        velocity: int = 100,
-        octave_offset: int = 0,
-        humanization: HumanizationConfig | None = None,
-        random_seed: int | None = 0,
-        instrument_programs: dict[str, int] | None = None,
+    root: str,
+    quality: str,
+    instrument: str,
+    *,
+    duration: float = DEFAULT_CONFIG.chord_duration,
+    velocity: int = 100,
+    octave_offset: int = 0,
+    humanization: HumanizationConfig | None = None,
+    random_seed: int | None = 0,
+    instrument_programs: dict[str, int] | None = None,
 ) -> pretty_midi.PrettyMIDI:
     midi = pretty_midi.PrettyMIDI()
     instruments = instrument_programs or DEFAULT_CONFIG.instrument_programs
@@ -172,10 +173,10 @@ def generate_chord_midi(
 
 
 def build_chord_voicing(
-        root_note: int,
-        chord_pattern: list[int],
-        config: HumanizationConfig,
-        rng: np.random.Generator,
+    root_note: int,
+    chord_pattern: list[int],
+    config: HumanizationConfig,
+    rng: np.random.Generator,
 ) -> list[int]:
     pitches = [root_note + interval for interval in chord_pattern]
     if not config.enabled:
@@ -220,10 +221,10 @@ def chord_spec_seed(base_seed: int | None, spec: ChordSpec) -> int | None:
 
 
 def generated_chord_filename(
-        spec: ChordSpec,
-        suffix: str,
-        *,
-        include_variation_suffix: bool = False,
+    spec: ChordSpec,
+    suffix: str,
+    *,
+    include_variation_suffix: bool = False,
 ) -> str:
     filename = (
         f"{safe_key_name(spec.root)}_{spec.quality}_{spec.instrument}"
@@ -236,32 +237,29 @@ def generated_chord_filename(
 
 
 def generate_chord_midi_files(
-        output_dir: Path,
-        *,
-        duration: float = DEFAULT_CONFIG.chord_duration,
-        durations: tuple[float, ...] | None = None,
-        repetitions: int = DEFAULT_CONFIG.repetitions,
-        max_files: int | None = None,
-        octave_offsets: tuple[int, ...] = DEFAULT_CONFIG.octave_offsets,
-        velocities: tuple[int, ...] = DEFAULT_CONFIG.velocities,
-        instrument_programs: dict[str, int] | None = None,
-        humanization: HumanizationConfig | None = None,
-        random_seed: int | None = 0,
+    output_dir: Path,
+    *,
+    duration: float = DEFAULT_CONFIG.chord_duration,
+    durations: tuple[float, ...] | None = None,
+    repetitions: int = DEFAULT_CONFIG.repetitions,
+    max_files: int | None = None,
+    octave_offsets: tuple[int, ...] = DEFAULT_CONFIG.octave_offsets,
+    velocities: tuple[int, ...] = DEFAULT_CONFIG.velocities,
+    instrument_programs: dict[str, int] | None = None,
+    humanization: HumanizationConfig | None = None,
+    random_seed: int | None = 0,
 ) -> list[GeneratedMidi]:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated: list[GeneratedMidi] = []
-    effective_durations = durations if durations is not None else (duration,)
-    include_variation_suffix = durations is not None or repetitions > 1
-
-    specs = iter_chord_specs(
+    specs, include_variation_suffix = chord_specs_for_generation(
+        duration=duration,
+        durations=durations,
+        repetitions=repetitions,
+        max_files=max_files,
         octave_offsets=octave_offsets,
         velocities=velocities,
-        durations=effective_durations,
-        repetitions=repetitions,
         instrument_programs=instrument_programs,
     )
-    if max_files is not None:
-        specs = specs[:max_files]
 
     for spec in specs:
         filename = generated_chord_filename(
@@ -299,36 +297,34 @@ def generate_chord_midi_files(
 
 
 def generate_chord_wav_files(
-        output_dir: Path,
-        *,
-        duration: float = DEFAULT_CONFIG.chord_duration,
-        durations: tuple[float, ...] | None = None,
-        repetitions: int = DEFAULT_CONFIG.repetitions,
-        max_files: int | None = None,
-        sample_rate: int = DEFAULT_CONFIG.chord_sample_rate,
-        octave_offsets: tuple[int, ...] = DEFAULT_CONFIG.octave_offsets,
-        velocities: tuple[int, ...] = DEFAULT_CONFIG.velocities,
-        instrument_programs: dict[str, int] | None = None,
-        renderer: str = DEFAULT_CONFIG.renderer,
-        soundfont_path: Path | None = None,
-        humanization: HumanizationConfig | None = None,
-        random_seed: int | None = 0,
+    output_dir: Path,
+    *,
+    duration: float = DEFAULT_CONFIG.chord_duration,
+    durations: tuple[float, ...] | None = None,
+    repetitions: int = DEFAULT_CONFIG.repetitions,
+    max_files: int | None = None,
+    sample_rate: int = DEFAULT_CONFIG.chord_sample_rate,
+    octave_offsets: tuple[int, ...] = DEFAULT_CONFIG.octave_offsets,
+    velocities: tuple[int, ...] = DEFAULT_CONFIG.velocities,
+    instrument_programs: dict[str, int] | None = None,
+    renderer: str = DEFAULT_CONFIG.renderer,
+    soundfont_path: Path | None = None,
+    humanization: HumanizationConfig | None = None,
+    random_seed: int | None = 0,
 ) -> list[GeneratedAudio]:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated: list[GeneratedAudio] = []
     resolved_renderer = resolve_audio_renderer(renderer, soundfont_path)
-    effective_durations = durations if durations is not None else (duration,)
-    include_variation_suffix = durations is not None or repetitions > 1
 
-    specs = iter_chord_specs(
+    specs, include_variation_suffix = chord_specs_for_generation(
+        duration=duration,
+        durations=durations,
+        repetitions=repetitions,
+        max_files=max_files,
         octave_offsets=octave_offsets,
         velocities=velocities,
-        durations=effective_durations,
-        repetitions=repetitions,
         instrument_programs=instrument_programs,
     )
-    if max_files is not None:
-        specs = specs[:max_files]
 
     for spec in specs:
         key_dir = output_dir / safe_key_name(spec.root)
@@ -360,11 +356,9 @@ def generate_chord_wav_files(
                 soundfont_path=required_soundfont_path(soundfont_path),
             )
         else:
-            import soundfile as sf
-
             audio = midi.synthesize(fs=sample_rate)
             audio = fit_audio_duration(audio, spec.duration, sample_rate)
-            sf.write(path, audio, sample_rate, subtype="PCM_16")
+            write_audio(path, audio, sample_rate)
 
         generated.append(
             GeneratedAudio(
@@ -383,11 +377,35 @@ def generate_chord_wav_files(
     return generated
 
 
+def chord_specs_for_generation(
+    *,
+    duration: float,
+    durations: tuple[float, ...] | None,
+    repetitions: int,
+    max_files: int | None,
+    octave_offsets: tuple[int, ...],
+    velocities: tuple[int, ...],
+    instrument_programs: dict[str, int] | None,
+) -> tuple[list[ChordSpec], bool]:
+    effective_durations = durations if durations is not None else (duration,)
+    specs = iter_chord_specs(
+        octave_offsets=octave_offsets,
+        velocities=velocities,
+        durations=effective_durations,
+        repetitions=repetitions,
+        instrument_programs=instrument_programs,
+    )
+    if max_files is not None:
+        specs = specs[:max_files]
+    include_variation_suffix = durations is not None or repetitions > 1
+    return specs, include_variation_suffix
+
+
 def write_generated_audio_manifest(
-        generated: list[GeneratedAudio],
-        manifest_path: Path,
-        *,
-        base_dir: Path | None = None,
+    generated: list[GeneratedAudio],
+    manifest_path: Path,
+    *,
+    base_dir: Path | None = None,
 ) -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     rows = []
@@ -451,22 +469,16 @@ def required_soundfont_path(soundfont_path: Path | None) -> Path:
 
 def fit_audio_duration(audio: np.ndarray, duration: float, sample_rate: int) -> np.ndarray:
     target_samples = max(1, int(round(duration * sample_rate)))
-    if len(audio) > target_samples:
-        return audio[:target_samples]
-    if len(audio) < target_samples:
-        pad_width = [(0, target_samples - len(audio))]
-        pad_width.extend((0, 0) for _ in audio.shape[1:])
-        return np.pad(audio, pad_width)
-    return audio
+    return fit_audio_length(audio, target_samples)
 
 
 def write_wav_with_fluidsynth(
-        midi: pretty_midi.PrettyMIDI,
-        output_path: Path,
-        *,
-        duration: float,
-        sample_rate: int,
-        soundfont_path: Path,
+    midi: pretty_midi.PrettyMIDI,
+    output_path: Path,
+    *,
+    duration: float,
+    sample_rate: int,
+    soundfont_path: Path,
 ) -> None:
     import soundfile as sf
 

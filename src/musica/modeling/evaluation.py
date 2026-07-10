@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 from sklearn.metrics import classification_report, f1_score
 
-LOGGER = logging.getLogger(__name__)
+from musica.logging import logger
 
 
 @dataclass(frozen=True)
@@ -28,7 +27,7 @@ class ChordEvaluator:
         y_test: np.ndarray,
         labels: list[str],
     ) -> EvaluationResult:
-        LOGGER.info("Evaluation sur le test: %s exemples", x_test.shape[0])
+        logger.info("Evaluation sur le test: {} exemples", x_test.shape[0])
         y_pred_proba = model.predict(x_test, verbose=0)
         y_pred = np.argmax(y_pred_proba, axis=1)
         test_loss, test_accuracy = model.evaluate(x_test, y_test, verbose=0)
@@ -38,8 +37,8 @@ class ChordEvaluator:
             f1_macro=float(f1_score(y_test, y_pred, average="macro")),
             report=classification_report(y_test, y_pred, target_names=labels),
         )
-        LOGGER.info(
-            "Evaluation terminee: accuracy=%.4f, loss=%.4f, f1_macro=%.4f",
+        logger.info(
+            "Evaluation terminee: accuracy={:.4f}, loss={:.4f}, f1_macro={:.4f}",
             result.test_accuracy,
             result.test_loss,
             result.f1_macro,

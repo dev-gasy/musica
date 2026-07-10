@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 import numpy as np
 
+from musica.logging import logger
 from musica.modeling.config import MusicaConfig
 from musica.modeling.dataset import ChordDataset
-
-LOGGER = logging.getLogger(__name__)
 
 
 class FeatureExtractor:
@@ -39,7 +37,7 @@ class FeatureExtractor:
         if not paths:
             raise ValueError("Cannot load features for an empty path list")
 
-        LOGGER.info("Extraction des features: %s fichiers", len(paths))
+        logger.info("Extraction des features: {} fichiers", len(paths))
         first = self.audio_features(paths[0])
         x = np.empty((len(paths), *first.shape), dtype=np.float32)
         y = np.empty(len(paths), dtype=np.int32)
@@ -50,7 +48,7 @@ class FeatureExtractor:
             x[index] = self.audio_features(path)
             y[index] = self.dataset.label_to_index[self.dataset.label_from_path(path)]
             if (index + 1) % 250 == 0 or index + 1 == len(paths):
-                LOGGER.info("Features extraites: %s/%s", index + 1, len(paths))
+                logger.info("Features extraites: {}/{}", index + 1, len(paths))
 
-        LOGGER.info("Features pretes: shape=%s", x.shape)
+        logger.info("Features pretes: shape={}", x.shape)
         return x, y

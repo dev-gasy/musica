@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
 import numpy as np
 
+from musica.logging import logger
 from musica.modeling.config import MusicaConfig
 from musica.modeling.constants import NOTE_ALIASES
 from musica.modeling.utils import label_sort_key, stable_digest
-
-LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -33,7 +31,7 @@ class ChordDataset:
         self.label_to_index: dict[str, int] = {}
 
     def discover(self) -> "ChordDataset":
-        LOGGER.info("Recherche des fichiers WAV dans %s", self.dataset_dir)
+        logger.info("Recherche des fichiers WAV dans {}", self.dataset_dir)
         self.audio_paths = sorted(self.dataset_dir.glob("**/*.wav"))
         if not self.audio_paths:
             raise FileNotFoundError(f"No WAV files found under {self.dataset_dir}")
@@ -44,8 +42,8 @@ class ChordDataset:
         self.label_to_index = {
             label: index for index, label in enumerate(self.labels)
         }
-        LOGGER.info(
-            "Dataset decouvert: %s fichiers audio, %s classes",
+        logger.info(
+            "Dataset decouvert: {} fichiers audio, {} classes",
             len(self.audio_paths),
             len(self.labels),
         )
@@ -55,8 +53,8 @@ class ChordDataset:
         if not self.audio_paths:
             self.discover()
 
-        LOGGER.info(
-            "Creation du split stratifie: val_ratio=%s, test_ratio=%s, seed=%s",
+        logger.info(
+            "Creation du split stratifie: val_ratio={}, test_ratio={}, seed={}",
             self.config.val_ratio,
             self.config.test_ratio,
             self.config.seed,
@@ -85,8 +83,8 @@ class ChordDataset:
         rng.shuffle(train_paths)
         rng.shuffle(val_paths)
         rng.shuffle(test_paths)
-        LOGGER.info(
-            "Split pret: train=%s, validation=%s, test=%s",
+        logger.info(
+            "Split pret: train={}, validation={}, test={}",
             len(train_paths),
             len(val_paths),
             len(test_paths),

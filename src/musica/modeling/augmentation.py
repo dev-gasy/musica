@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Iterable
 
 import numpy as np
 
+from musica.logging import logger
 from musica.modeling.constants import QUALITIES, ROOTS
-
-LOGGER = logging.getLogger(__name__)
 
 
 class TranspositionAugmenter:
@@ -26,7 +24,7 @@ class TranspositionAugmenter:
         x_aug = []
         y_aug = []
         shifts = tuple(shifts)
-        LOGGER.info("Augmentation par transposition: shifts=%s", shifts)
+        logger.info("Augmentation par transposition: shifts={}", shifts)
 
         for shift in shifts:
             x_shifted = np.roll(x, shift=shift, axis=2)
@@ -39,8 +37,8 @@ class TranspositionAugmenter:
 
         augmented_x = np.concatenate(x_aug, axis=0)
         augmented_y = np.concatenate(y_aug, axis=0)
-        LOGGER.info(
-            "Augmentation terminee: %s -> %s exemples",
+        logger.info(
+            "Augmentation terminee: {} -> {} exemples",
             x.shape[0],
             augmented_x.shape[0],
         )

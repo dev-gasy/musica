@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
+from musica.logging import configure_logging as configure_loguru
+from musica.logging import logger
 from musica.modeling import (
     ChordEvaluator,
     ChordPredictor,
@@ -15,13 +16,12 @@ from musica.modeling import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-LOGGER = logging.getLogger(__name__)
 
 
 def run_pipeline(project_root: Path | None = None) -> None:
     configure_logging()
     root = PROJECT_ROOT if project_root is None else project_root
-    LOGGER.info("Demarrage du pipeline Musica")
+    logger.info("Demarrage du pipeline Musica")
     config = MusicaConfig.load(root / "musica.toml")
     prepared = prepare_data(config, project_root=root)
     trainer = ChordTrainer(config, prepared.dataset, project_root=root)
@@ -59,12 +59,8 @@ def run_pipeline(project_root: Path | None = None) -> None:
     print(f"Audio exemple : {config.example_audio_path}")
     for label, probability in predictions:
         print(f"{label:8s} {probability:.3f}")
-    LOGGER.info("Pipeline Musica termine")
+    logger.info("Pipeline Musica termine")
 
 
 def configure_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    configure_loguru()

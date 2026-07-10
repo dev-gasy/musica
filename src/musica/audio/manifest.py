@@ -126,14 +126,14 @@ def default_manifest_sources(config: MusicaConfig | None = None) -> tuple[Manife
 
 
 def build_audio_manifest(
-        output_path: Path,
-        *,
-        sources: Iterable[ManifestSource] | None = None,
-        config: MusicaConfig | None = None,
-        train_ratio: float = 0.80,
-        val_ratio: float = 0.10,
-        test_ratio: float = 0.10,
-        include_missing_audio: bool = False,
+    output_path: Path,
+    *,
+    sources: Iterable[ManifestSource] | None = None,
+    config: MusicaConfig | None = None,
+    train_ratio: float = 0.80,
+    val_ratio: float = 0.10,
+    test_ratio: float = 0.10,
+    include_missing_audio: bool = False,
 ) -> ManifestBuildSummary:
     validate_split_ratios(train_ratio, val_ratio, test_ratio)
     resolved_sources = tuple(sources or default_manifest_sources(config))
@@ -177,11 +177,11 @@ def build_audio_manifest(
 
 
 def rows_from_raw_directory(
-        source: ManifestSource,
-        *,
-        train_ratio: float,
-        val_ratio: float,
-        include_missing_audio: bool,
+    source: ManifestSource,
+    *,
+    train_ratio: float,
+    val_ratio: float,
+    include_missing_audio: bool,
 ) -> tuple[list[CompiledManifestRow], int]:
     if source.directory is None or not source.directory.exists():
         return [], 1
@@ -200,18 +200,16 @@ def rows_from_raw_directory(
         root_note, quality = parsed
         duration, sample_rate = audio_info
         rows.append(
-            CompiledManifestRow(
+            compiled_manifest_row(
                 path=path,
                 source_path=path,
-                start_time=0.0,
                 duration=duration,
                 root_note=root_note,
                 quality=quality,
-                label=f"{root_note}_{quality}",
                 dataset=source.dataset,
-                split=stable_split(str(path), train_ratio, val_ratio),
-                is_segment=False,
-                track_id=path.stem,
+                split_key=str(path),
+                train_ratio=train_ratio,
+                val_ratio=val_ratio,
                 source_manifest=None,
                 sample_rate=sample_rate,
             )
@@ -220,11 +218,11 @@ def rows_from_raw_directory(
 
 
 def rows_from_generated_manifest(
-        source: ManifestSource,
-        *,
-        train_ratio: float,
-        val_ratio: float,
-        include_missing_audio: bool,
+    source: ManifestSource,
+    *,
+    train_ratio: float,
+    val_ratio: float,
+    include_missing_audio: bool,
 ) -> tuple[list[CompiledManifestRow], int]:
     if source.manifest_path is None or not source.manifest_path.exists():
         return [], 1
@@ -249,23 +247,52 @@ def rows_from_generated_manifest(
         duration, sample_rate = audio_info
         source_path = Path(raw_row.get("source_path") or path_value)
         rows.append(
-            CompiledManifestRow(
+            compiled_manifest_row(
                 path=path,
                 source_path=source_path,
-                start_time=0.0,
                 duration=duration,
                 root_note=root_note,
                 quality=quality,
-                label=f"{root_note}_{quality}",
                 dataset=source.dataset,
-                split=stable_split(str(source_path), train_ratio, val_ratio),
-                is_segment=False,
-                track_id=path.stem,
+                split_key=str(source_path),
+                train_ratio=train_ratio,
+                val_ratio=val_ratio,
                 source_manifest=source.manifest_path,
                 sample_rate=sample_rate,
             )
         )
     return rows, skipped
+
+
+def compiled_manifest_row(
+    *,
+    path: Path,
+    source_path: Path,
+    duration: float,
+    root_note: str,
+    quality: str,
+    dataset: str,
+    split_key: str,
+    train_ratio: float,
+    val_ratio: float,
+    source_manifest: Path | None,
+    sample_rate: int,
+) -> CompiledManifestRow:
+    return CompiledManifestRow(
+        path=path,
+        source_path=source_path,
+        start_time=0.0,
+        duration=duration,
+        root_note=root_note,
+        quality=quality,
+        label=f"{root_note}_{quality}",
+        dataset=dataset,
+        split=stable_split(split_key, train_ratio, val_ratio),
+        is_segment=False,
+        track_id=path.stem,
+        source_manifest=source_manifest,
+        sample_rate=sample_rate,
+    )
 
 
 def read_csv_rows(path: Path) -> list[dict[str, str]]:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Callable
 
 from musica.audio.chords import (
     HumanizationConfig,
@@ -22,6 +23,8 @@ from musica.augmentation.noise import (
 from musica.augmentation.realism import augment_wav_dataset_with_realism
 from musica.augmentation.transpose import augment_wav_dataset_with_transposition
 from musica.modeling.config import MusicaConfig
+
+CommandHandler = Callable[[argparse.Namespace, MusicaConfig], None]
 
 
 def positive_float(value: str) -> float:
@@ -427,108 +430,135 @@ def build_parser(config: MusicaConfig | None = None) -> argparse.ArgumentParser:
     return parser
 
 
+def run_generate_midi(args: argparse.Namespace, config: MusicaConfig) -> None:
+    generated = generate_chord_midi_files(
+        args.output_dir,
+        duration=args.duration,
+        durations=args.durations,
+        repetitions=args.repetitions,
+        max_files=args.max_files,
+        octave_offsets=config.octave_offsets,
+        velocities=config.velocities,
+        instrument_programs=config.instrument_programs,
+        humanization=humanization_config(args),
+        random_seed=args.seed,
+    )
+    print(f"Generated {len(generated)} MIDI files in {args.output_dir}")
+
+
+def run_generate_wav(args: argparse.Namespace, config: MusicaConfig) -> None:
+    generated = generate_chord_wav_files(
+        args.output_dir,
+        duration=args.duration,
+        durations=args.durations,
+        repetitions=args.repetitions,
+        max_files=args.max_files,
+        sample_rate=args.sample_rate,
+        octave_offsets=config.octave_offsets,
+        velocities=config.velocities,
+        instrument_programs=config.instrument_programs,
+        renderer=args.renderer,
+        soundfont_path=args.soundfont,
+        humanization=humanization_config(args),
+        random_seed=args.seed,
+    )
+    renderer = generated[0].renderer if generated else args.renderer
+    print(
+        f"Generated {len(generated)} WAV files in {args.output_dir} "
+        f"using {renderer}"
+    )
+    if not args.no_manifest:
+        manifest_path = args.manifest_path or args.output_dir / "manifest.csv"
+        write_generated_audio_manifest(generated, manifest_path)
+        print(f"Wrote manifest to {manifest_path}")
+
+
+def run_download_noises(args: argparse.Namespace, config: MusicaConfig) -> None:
+    sources = noise_sources_from_urls(args.url) if args.url else DEFAULT_INTERNET_NOISES
+    downloaded = download_noise_wavs(
+        args.output_dir,
+        sources=sources,
+        overwrite=args.overwrite,
+        manifest_path=args.manifest_path,
+    )
+    print(f"Downloaded {len(downloaded)} noise WAV files in {args.output_dir}")
+
+
+def run_augment_noise(args: argparse.Namespace, config: MusicaConfig) -> None:
+    generated = augment_wav_dataset_with_noise(
+        args.input_dir,
+        args.noise_dir,
+        args.output_dir,
+        snrs_db=args.snrs_db,
+        mode=args.mode,
+        max_files=args.max_files,
+        random_seed=args.seed,
+        manifest_path=args.manifest_path,
+    )
+    print(f"Generated {len(generated)} noisy WAV files in {args.output_dir}")
+
+
+def run_augment_realistic(args: argparse.Namespace, config: MusicaConfig) -> None:
+    generated = augment_wav_dataset_with_realism(
+        args.input_dir,
+        args.output_dir,
+        variants=args.variants,
+        sample_rates=args.sample_rates,
+        max_files=args.max_files,
+        random_seed=args.seed,
+        keep_duration=args.keep_duration,
+        manifest_path=args.manifest_path,
+    )
+    print(f"Generated {len(generated)} realistic WAV files in {args.output_dir}")
+
+
+def run_augment_transpose(args: argparse.Namespace, config: MusicaConfig) -> None:
+    generated = augment_wav_dataset_with_transposition(
+        args.input_dir,
+        args.output_dir,
+        semitones=args.semitones,
+        roots=args.roots,
+        qualities=args.qualities,
+        max_files=args.max_files,
+        manifest_path=args.manifest_path,
+    )
+    print(f"Generated {len(generated)} transposed WAV files in {args.output_dir}")
+
+
+def run_build_manifest(args: argparse.Namespace, config: MusicaConfig) -> None:
+    summary = build_audio_manifest(
+        args.output_path,
+        config=config,
+        train_ratio=args.train_ratio,
+        val_ratio=args.val_ratio,
+        test_ratio=args.test_ratio,
+        include_missing_audio=args.include_missing_audio,
+    )
+    print(f"Wrote {summary.rows_written} rows to {summary.output_path}")
+    if summary.rows_skipped:
+        print(f"Skipped {summary.rows_skipped} unavailable or invalid rows")
+    print(f"Datasets: {summary.dataset_counts}")
+    print(f"Splits: {summary.split_counts}")
+
+
+COMMAND_HANDLERS: dict[str, CommandHandler] = {
+    "generate-midi": run_generate_midi,
+    "generate-wav": run_generate_wav,
+    "download-noises": run_download_noises,
+    "augment-noise": run_augment_noise,
+    "augment-realistic": run_augment_realistic,
+    "augment-transpose": run_augment_transpose,
+    "build-manifest": run_build_manifest,
+}
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     config = args.config
+    handler = COMMAND_HANDLERS[args.command]
 
     try:
-        if args.command == "generate-midi":
-            generated = generate_chord_midi_files(
-                args.output_dir,
-                duration=args.duration,
-                durations=args.durations,
-                repetitions=args.repetitions,
-                max_files=args.max_files,
-                octave_offsets=config.octave_offsets,
-                velocities=config.velocities,
-                instrument_programs=config.instrument_programs,
-                humanization=humanization_config(args),
-                random_seed=args.seed,
-            )
-            print(f"Generated {len(generated)} MIDI files in {args.output_dir}")
-        elif args.command == "generate-wav":
-            generated = generate_chord_wav_files(
-                args.output_dir,
-                duration=args.duration,
-                durations=args.durations,
-                repetitions=args.repetitions,
-                max_files=args.max_files,
-                sample_rate=args.sample_rate,
-                octave_offsets=config.octave_offsets,
-                velocities=config.velocities,
-                instrument_programs=config.instrument_programs,
-                renderer=args.renderer,
-                soundfont_path=args.soundfont,
-                humanization=humanization_config(args),
-                random_seed=args.seed,
-            )
-            renderer = generated[0].renderer if generated else args.renderer
-            print(
-                f"Generated {len(generated)} WAV files in {args.output_dir} "
-                f"using {renderer}"
-            )
-            if not args.no_manifest:
-                manifest_path = args.manifest_path or args.output_dir / "manifest.csv"
-                write_generated_audio_manifest(generated, manifest_path)
-                print(f"Wrote manifest to {manifest_path}")
-        elif args.command == "download-noises":
-            sources = noise_sources_from_urls(args.url) if args.url else DEFAULT_INTERNET_NOISES
-            downloaded = download_noise_wavs(
-                args.output_dir,
-                sources=sources,
-                overwrite=args.overwrite,
-                manifest_path=args.manifest_path,
-            )
-            print(f"Downloaded {len(downloaded)} noise WAV files in {args.output_dir}")
-        elif args.command == "augment-noise":
-            generated = augment_wav_dataset_with_noise(
-                args.input_dir,
-                args.noise_dir,
-                args.output_dir,
-                snrs_db=args.snrs_db,
-                mode=args.mode,
-                max_files=args.max_files,
-                random_seed=args.seed,
-                manifest_path=args.manifest_path,
-            )
-            print(f"Generated {len(generated)} noisy WAV files in {args.output_dir}")
-        elif args.command == "augment-realistic":
-            generated = augment_wav_dataset_with_realism(
-                args.input_dir,
-                args.output_dir,
-                variants=args.variants,
-                sample_rates=args.sample_rates,
-                max_files=args.max_files,
-                random_seed=args.seed,
-                keep_duration=args.keep_duration,
-                manifest_path=args.manifest_path,
-            )
-            print(f"Generated {len(generated)} realistic WAV files in {args.output_dir}")
-        elif args.command == "augment-transpose":
-            generated = augment_wav_dataset_with_transposition(
-                args.input_dir,
-                args.output_dir,
-                semitones=args.semitones,
-                roots=args.roots,
-                qualities=args.qualities,
-                max_files=args.max_files,
-                manifest_path=args.manifest_path,
-            )
-            print(f"Generated {len(generated)} transposed WAV files in {args.output_dir}")
-        elif args.command == "build-manifest":
-            summary = build_audio_manifest(
-                args.output_path,
-                config=config,
-                train_ratio=args.train_ratio,
-                val_ratio=args.val_ratio,
-                test_ratio=args.test_ratio,
-                include_missing_audio=args.include_missing_audio,
-            )
-            print(f"Wrote {summary.rows_written} rows to {summary.output_path}")
-            if summary.rows_skipped:
-                print(f"Skipped {summary.rows_skipped} unavailable or invalid rows")
-            print(f"Datasets: {summary.dataset_counts}")
-            print(f"Splits: {summary.split_counts}")
+        handler(args, config)
     except (FileNotFoundError, OSError, RuntimeError, ValueError) as error:
         parser.error(str(error))

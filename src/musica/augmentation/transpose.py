@@ -9,6 +9,13 @@ from pathlib import Path
 import numpy as np
 
 from musica.audio.chords import safe_key_name
+from musica.audio.io import (
+    fit_audio_length,
+    list_wav_files,
+    peak_limit,
+    read_audio,
+    write_audio as write_wav_audio,
+)
 from musica.audio.manifest import parse_chord_filename
 from musica.modeling.config import MusicaConfig
 
@@ -28,24 +35,22 @@ class TransposedAudio:
 
 
 def augment_wav_dataset_with_transposition(
-        input_dir: Path,
-        output_dir: Path,
-        *,
-        semitones: tuple[int, ...] = DEFAULT_CONFIG.transpose_semitones,
-        roots: tuple[str, ...] = DEFAULT_CONFIG.transpose_roots,
-        qualities: tuple[str, ...] = DEFAULT_CONFIG.transpose_qualities,
-        max_files: int | None = None,
-        manifest_path: Path | None = None,
+    input_dir: Path,
+    output_dir: Path,
+    *,
+    semitones: tuple[int, ...] = DEFAULT_CONFIG.transpose_semitones,
+    roots: tuple[str, ...] = DEFAULT_CONFIG.transpose_roots,
+    qualities: tuple[str, ...] = DEFAULT_CONFIG.transpose_qualities,
+    max_files: int | None = None,
+    manifest_path: Path | None = None,
 ) -> list[TransposedAudio]:
     validate_transposition_args(semitones, roots, qualities)
-    source_files = sorted(path for path in input_dir.rglob("*.wav") if path.is_file())
-    selected_files = [
-        path
-        for path in source_files
-        if chord_matches_filters(path, roots=roots, qualities=qualities)
-    ]
-    if max_files is not None:
-        selected_files = selected_files[:max_files]
+    selected_files = selected_chord_files(
+        input_dir,
+        roots=roots,
+        qualities=qualities,
+        max_files=max_files,
+    )
     if not selected_files:
         raise FileNotFoundError(f"No matching chord WAV files found in {input_dir}")
 
@@ -58,26 +63,15 @@ def augment_wav_dataset_with_transposition(
         original_root, quality = parsed
         audio, sample_rate = read_audio(source_path)
         for shift in semitones:
-            root_note = transpose_root(original_root, shift)
-            shifted = pitch_shift_audio(audio, sample_rate, shift)
-            output_path = transposed_output_path(
-                output_dir,
-                source_path,
-                root_note=root_note,
-                quality=quality,
-                semitones=shift,
-            )
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            write_audio(output_path, shifted, sample_rate)
             generated.append(
-                TransposedAudio(
-                    path=output_path,
-                    source_path=source_path,
-                    original_root_note=original_root,
-                    root_note=root_note,
+                generate_transposed_audio(
+                    output_dir,
+                    source_path,
+                    audio,
+                    sample_rate,
+                    original_root=original_root,
                     quality=quality,
                     semitones=shift,
-                    sample_rate=sample_rate,
                 )
             )
 
@@ -88,10 +82,59 @@ def augment_wav_dataset_with_transposition(
     return generated
 
 
+def selected_chord_files(
+    input_dir: Path,
+    *,
+    roots: tuple[str, ...],
+    qualities: tuple[str, ...],
+    max_files: int | None,
+) -> list[Path]:
+    selected_files = [
+        path
+        for path in list_wav_files(input_dir)
+        if chord_matches_filters(path, roots=roots, qualities=qualities)
+    ]
+    if max_files is not None:
+        return selected_files[:max_files]
+    return selected_files
+
+
+def generate_transposed_audio(
+    output_dir: Path,
+    source_path: Path,
+    audio: np.ndarray,
+    sample_rate: int,
+    *,
+    original_root: str,
+    quality: str,
+    semitones: int,
+) -> TransposedAudio:
+    root_note = transpose_root(original_root, semitones)
+    shifted = pitch_shift_audio(audio, sample_rate, semitones)
+    output_path = transposed_output_path(
+        output_dir,
+        source_path,
+        root_note=root_note,
+        quality=quality,
+        semitones=semitones,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    write_audio(output_path, shifted, sample_rate)
+    return TransposedAudio(
+        path=output_path,
+        source_path=source_path,
+        original_root_note=original_root,
+        root_note=root_note,
+        quality=quality,
+        semitones=semitones,
+        sample_rate=sample_rate,
+    )
+
+
 def validate_transposition_args(
-        semitones: tuple[int, ...],
-        roots: tuple[str, ...],
-        qualities: tuple[str, ...],
+    semitones: tuple[int, ...],
+    roots: tuple[str, ...],
+    qualities: tuple[str, ...],
 ) -> None:
     if not semitones:
         raise ValueError("at least one semitone shift is required")
@@ -108,10 +151,10 @@ def validate_transposition_args(
 
 
 def chord_matches_filters(
-        path: Path,
-        *,
-        roots: tuple[str, ...],
-        qualities: tuple[str, ...],
+    path: Path,
+    *,
+    roots: tuple[str, ...],
+    qualities: tuple[str, ...],
 ) -> bool:
     parsed = parse_chord_filename(path)
     if parsed is None:
@@ -140,38 +183,17 @@ def pitch_shift_audio(audio: np.ndarray, sample_rate: int, semitones: int) -> np
     return fit_audio_length(shifted, len(audio))
 
 
-def fit_audio_length(audio: np.ndarray, target_samples: int) -> np.ndarray:
-    if len(audio) > target_samples:
-        return audio[:target_samples]
-    if len(audio) < target_samples:
-        padding = np.zeros((target_samples - len(audio), audio.shape[1]), dtype=np.float32)
-        return np.vstack((audio, padding))
-    return audio
-
-
-def read_audio(path: Path) -> tuple[np.ndarray, int]:
-    import soundfile as sf
-
-    audio, sample_rate = sf.read(path, always_2d=True, dtype="float32")
-    return audio, sample_rate
-
-
 def write_audio(path: Path, audio: np.ndarray, sample_rate: int) -> None:
-    import soundfile as sf
-
-    peak = float(np.max(np.abs(audio)))
-    if peak > 0.99:
-        audio = audio * (0.99 / peak)
-    sf.write(path, audio, sample_rate, subtype="PCM_16")
+    write_wav_audio(path, peak_limit(audio), sample_rate)
 
 
 def transposed_output_path(
-        output_dir: Path,
-        source_path: Path,
-        *,
-        root_note: str,
-        quality: str,
-        semitones: int,
+    output_dir: Path,
+    source_path: Path,
+    *,
+    root_note: str,
+    quality: str,
+    semitones: int,
 ) -> Path:
     shift_label = f"p{semitones}" if semitones > 0 else f"m{abs(semitones)}"
     filename = (
@@ -182,8 +204,8 @@ def transposed_output_path(
 
 
 def write_transposed_audio_manifest(
-        generated: list[TransposedAudio],
-        manifest_path: Path,
+    generated: list[TransposedAudio],
+    manifest_path: Path,
 ) -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with manifest_path.open("w", newline="") as file:
