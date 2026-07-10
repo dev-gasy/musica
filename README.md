@@ -48,6 +48,18 @@ uv run musica setup-env --plan-only
 FluidSynth est optionnel. Quand il est installé avec une SoundFont, Musica
 l’utilise pour le rendu audio. Sinon, le rendu passe par PrettyMIDI.
 
+Si le téléchargement automatique de la SoundFont échoue avec `HTTP Error 403:
+Forbidden`, téléchargez manuellement `FluidR3_GM.sf2` depuis
+[Musical Artifacts](https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2)
+ou une autre source fiable, puis placez le fichier ici :
+
+```text
+assets/soundfonts/FluidR3_GM.sf2
+```
+
+Sans ce fichier, `setup-env` continue quand même avec le renderer `auto`, qui
+utilise PrettyMIDI.
+
 ## Structure
 
 - `src/musica/` : code Python.
