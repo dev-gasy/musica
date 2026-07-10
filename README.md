@@ -38,7 +38,7 @@ Les objectifs du projet étaient les suivants :
 * entraîner un modèle capable de reconnaître les accords à partir de
   caractéristiques audio ;
 * garder les essais reproductibles avec une configuration centralisée, des
-  manifests, des séparations stables, un cache de modèle et des tests
+  manifests, des séparations stables, des caches de features et de modèle et des tests
   automatisés ;
 * documenter les choix techniques, les limites et les problèmes rencontrés.
 
@@ -94,7 +94,7 @@ flowchart TD
 
 Le fichier `musica.toml` centralise les paramètres importants :
 
-* chemins des données et des artefacts ;
+* emplacements des données et artefacts, rangés avec la fonctionnalité qui les utilise ;
 * durée audio cible ;
 * fréquence d’échantillonnage ;
 * ratios de séparation ;
@@ -207,7 +207,7 @@ Le notebook couvre les étapes suivantes :
 2. préparation des données avec split stratifié ;
 3. audit du dataset par source, qualité d’accord et séparation ;
 4. visualisation d’un signal audio et de sa feature Chroma CQT ;
-5. chargement du modèle en cache ou entraînement si le cache est absent ;
+5. réutilisation du cache de features, puis chargement du modèle en cache ou entraînement si le cache est absent ;
 6. affichage de l’architecture du modèle avec `model.summary()` ;
 7. courbes d’entraînement, loss, accuracy et learning rate ;
 8. métriques de test, matrice de confusion normalisée et analyse des erreurs ;
@@ -253,8 +253,10 @@ jupyter lab musica.ipynb
 
 Si un environnement Jupyter est déjà configuré, il suffit de sélectionner le
 kernel `Musica` ou le Python de `.venv`. L’exécution du notebook réutilise le
-cache modèle existant tant que la signature des données et des paramètres ne
-change pas.
+cache de features dans `logs/features` et le cache modèle dans `logs/models`
+tant que les fichiers audio, les splits et les paramètres ne changent pas. Ces
+emplacements viennent de `feature_cache_dir` dans `[features]` et de `logs_dir`
+dans `[training]`.
 
 ## Architecture du modèle
 
@@ -559,8 +561,8 @@ Les principaux problèmes rencontrés sont les suivants :
    fondamentale change. Le projet doit donc recalculer l’étiquette correctement.
 4. Reproductibilité : les résultats deviennent difficiles à comparer si les
    données, les séparations ou les paramètres changent sans trace. Les manifests,
-   les graines aléatoires, les signatures d’exécution et les paramètres
-   sauvegardés répondent à ce besoin.
+   les graines aléatoires, le cache de features, les signatures d’exécution et
+   les paramètres sauvegardés répondent à ce besoin.
 5. Dépendances audio : la génération audio dépend parfois de composants externes
    comme FluidSynth et une SoundFont. Le projet prévoit donc un rendu automatique
    capable de revenir à PrettyMIDI si FluidSynth n’est pas disponible.
@@ -575,53 +577,74 @@ uv sync --extra dev
 
 FluidSynth est optionnel. Si FluidSynth et la SoundFont
 `assets/soundfonts/FluidR3_GM.sf2` sont disponibles, le rendu automatique les
-utilise. Sinon, la génération WAV peut passer par PrettyMIDI.
+utilise. Sinon, la génération WAV peut passer par PrettyMIDI. La SoundFont
+FluidR3 GM peut être téléchargée depuis
+[Musical Artifacts](https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2).
 
-1. Générer des WAV propres :
-
-```bash
-uv run musica generate-wav --output-dir audio/chords/clean
-```
-
-2. Télécharger des bruits et créer des variantes bruitées :
+1. Télécharger les ressources externes en une seule commande :
 
 ```bash
-uv run musica download-noises --output-dir assets/noises/internet
-uv run musica augment-noise --input-dir audio/chords/clean --noise-dir assets/noises/internet --output-dir audio/chords/noisy
+uv run musica download-assets
 ```
 
-3. Créer des variantes plus réalistes :
+Cette commande récupère la SoundFont FluidR3 GM depuis
+`https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2` et télécharge les
+bruits WAV configurés par défaut pour l’augmentation. Les chemins de sortie
+viennent de `musica.toml` : `soundfont_path` dans `[audio]` et
+`noise_download_dir` dans `[noise]`.
+
+2. Générer des WAV propres :
 
 ```bash
-uv run musica augment-realistic --input-dir audio/chords/clean --output-dir audio/chords/realistic --variants 2
+uv run musica generate-wav
 ```
 
-4. Transposer les accords et mettre à jour les étiquettes :
+La commande utilise les valeurs de `[audio]`, notamment `clean_output_dir`,
+`renderer` et `soundfont_path`. Si FluidSynth n’est pas disponible, utiliser
+le rendu PrettyMIDI :
 
 ```bash
-uv run musica augment-transpose --input-dir audio/chords/clean --output-dir audio/chords/transposed --semitones -5,7
+uv run musica generate-wav --renderer pretty-midi
 ```
 
-5. Compiler le manifest global :
+3. Créer des variantes bruitées :
 
 ```bash
-uv run musica build-manifest --output-path audio/manifest.csv
+uv run musica augment-noise
 ```
 
-6. Lancer le scénario complet de modélisation :
+4. Créer des variantes plus réalistes :
+
+```bash
+uv run musica augment-realistic
+```
+
+5. Transposer les accords et mettre à jour les étiquettes :
+
+```bash
+uv run musica augment-transpose
+```
+
+6. Compiler le manifest global :
+
+```bash
+uv run musica build-manifest
+```
+
+7. Lancer le scénario complet de modélisation :
 
 ```bash
 uv run python main.py
 ```
 
-7. Ouvrir le notebook de démonstration :
+8. Ouvrir le notebook de démonstration :
 
 ```bash
 uv run python -m ipykernel install --user --name musica --display-name "Musica"
 jupyter lab musica.ipynb
 ```
 
-8. Lancer les tests :
+9. Lancer les tests :
 
 ```bash
 uv run pytest

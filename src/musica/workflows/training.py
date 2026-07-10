@@ -52,7 +52,7 @@ def run_pipeline(project_root: Path | None = None) -> None:
 
     predictor = ChordPredictor(
         config,
-        FeatureExtractor(config, prepared.dataset),
+        FeatureExtractor(config, prepared.dataset, project_root=root),
         prepared.dataset.labels,
     )
     example_audio_files = config.examples.audio_paths(root)

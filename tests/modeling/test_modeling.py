@@ -8,6 +8,7 @@ from musica.modeling import (
     ChordTrainer,
     DatasetSplit,
     ExampleAudioConfig,
+    FeatureExtractor,
     MusicaConfig,
     PreparedData,
     TranspositionAugmenter,
@@ -71,18 +72,32 @@ def test_config_loads_sectioned_toml(tmp_path: Path) -> None:
                 "[training]",
                 "epochs = 5",
                 "batch_size = 8",
+                "logs_dir = 'logs/custom'",
                 "[features]",
                 "sample_rate = 16000",
-                "[paths]",
+                "cache_features = false",
+                "feature_cache_dir = 'cache/features'",
+                "[dataset]",
                 "dataset_dir = 'sectioned/chords'",
+                "recorded_audio_dir = 'sectioned/recorded'",
                 "[examples]",
                 "directory = 'examples'",
                 "[audio]",
+                "midi_output_dir = 'sectioned/midi'",
+                "clean_output_dir = 'sectioned/clean'",
                 "instrument_programs = { piano = 0, organ = 19 }",
                 "octave_offsets = [-1, 0]",
                 "velocities = [90, 110]",
                 "[noise]",
                 "noise_snrs_db = [9.0, 12.0]",
+                "noise_download_dir = 'sectioned/noises'",
+                "noisy_output_dir = 'sectioned/noisy'",
+                "[realism]",
+                "realistic_output_dir = 'sectioned/realistic'",
+                "[transpose]",
+                "transposed_output_dir = 'sectioned/transposed'",
+                "[manifest]",
+                "audio_manifest_path = 'sectioned/manifest.csv'",
                 "[prediction]",
                 "top_k = 4",
             ]
@@ -94,13 +109,24 @@ def test_config_loads_sectioned_toml(tmp_path: Path) -> None:
     assert config.seed == 11
     assert config.epochs == 5
     assert config.batch_size == 8
+    assert config.logs_dir == Path("logs/custom")
     assert config.sample_rate == 16000
+    assert config.cache_features is False
     assert config.dataset_dir == Path("sectioned/chords")
+    assert config.recorded_audio_dir == Path("sectioned/recorded")
+    assert config.feature_cache_dir == Path("cache/features")
     assert config.examples.directory == Path("examples")
+    assert config.midi_output_dir == Path("sectioned/midi")
+    assert config.clean_output_dir == Path("sectioned/clean")
     assert config.instrument_programs == {"piano": 0, "organ": 19}
     assert config.octave_offsets == (-1, 0)
     assert config.velocities == (90, 110)
     assert config.noise_snrs_db == (9.0, 12.0)
+    assert config.noise_download_dir == Path("sectioned/noises")
+    assert config.noisy_output_dir == Path("sectioned/noisy")
+    assert config.realistic_output_dir == Path("sectioned/realistic")
+    assert config.transposed_output_dir == Path("sectioned/transposed")
+    assert config.audio_manifest_path == Path("sectioned/manifest.csv")
     assert config.top_k == 4
 
 
@@ -147,6 +173,14 @@ def test_config_rejects_unknown_section_keys(tmp_path: Path) -> None:
     config_path.write_text("[training]\nepochs = 2\nnot_a_config = true\n")
 
     with pytest.raises(ValueError, match="training.not_a_config"):
+        MusicaConfig.load(config_path)
+
+
+def test_config_rejects_legacy_paths_section(tmp_path: Path) -> None:
+    config_path = tmp_path / "musica.toml"
+    config_path.write_text("[paths]\ndataset_dir = 'legacy/chords'\n")
+
+    with pytest.raises(ValueError, match="Unknown config keys: paths"):
         MusicaConfig.load(config_path)
 
 
@@ -208,6 +242,42 @@ def test_training_signature_changes_with_callback_strategy(tmp_path: Path) -> No
     ).signature(split)
 
     assert signature != changed_signature
+
+
+def test_feature_extractor_reuses_cached_features(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    write_fake_dataset(tmp_path, labels=("C_maj",))
+    config = MusicaConfig(feature_cache_dir=Path("cache/features"))
+    dataset = ChordDataset(config, project_root=tmp_path).discover()
+    paths = dataset.audio_paths[:2]
+    calls = 0
+
+    def fake_audio_features(_path: Path) -> np.ndarray:
+        nonlocal calls
+        calls += 1
+        return np.full((3, 12, 1), calls, dtype=np.float32)
+
+    extractor = FeatureExtractor(config, dataset, project_root=tmp_path)
+    monkeypatch.setattr(extractor, "audio_features", fake_audio_features)
+
+    x_first, y_first = extractor.load_features(paths, split_name="train")
+    cache_files = sorted((tmp_path / "cache" / "features").glob("train-*.npz"))
+
+    assert calls == 2
+    assert len(cache_files) == 1
+
+    monkeypatch.setattr(
+        extractor,
+        "audio_features",
+        lambda _path: pytest.fail("features should be loaded from cache"),
+    )
+
+    x_second, y_second = extractor.load_features(paths, split_name="train")
+
+    np.testing.assert_array_equal(x_second, x_first)
+    np.testing.assert_array_equal(y_second, y_first)
 
 
 def test_train_or_load_cache_hit_does_not_fit(

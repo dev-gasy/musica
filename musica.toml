@@ -8,6 +8,7 @@ learning_rate = 0.001
 force_retrain = false
 val_ratio = 0.15
 test_ratio = 0.15
+logs_dir = "logs"
 
 [features]
 sample_rate = 22050
@@ -15,21 +16,15 @@ target_duration = 1.5
 hop_length = 512
 bins_per_octave = 12
 n_chroma = 12
+cache_features = true
+feature_cache_dir = "logs/features"
 
 [prediction]
 top_k = 3
 
-[paths]
+[dataset]
 dataset_dir = "audio/chords"
-logs_dir = "logs"
-midi_output_dir = "audio/chords/midi"
-clean_output_dir = "audio/chords/clean"
-noise_download_dir = "assets/noises/internet"
-noisy_output_dir = "audio/chords/noisy"
-realistic_output_dir = "audio/chords/realistic"
-transposed_output_dir = "audio/chords/transposed"
 recorded_audio_dir = "audio/chords/recorded"
-audio_manifest_path = "audio/manifest.csv"
 
 [examples]
 directory = "examples"
@@ -41,6 +36,8 @@ model_architecture = "cnn_chords_chroma_cqt_v1"
 chord_duration = 1.5
 chord_sample_rate = 44100
 renderer = "auto"
+midi_output_dir = "audio/chords/midi"
+clean_output_dir = "audio/chords/clean"
 soundfont_path = "assets/soundfonts/FluidR3_GM.sf2"
 instrument_programs = { piano = 0, guitar = 24, synth_pad = 88 }
 repetitions = 1
@@ -55,22 +52,27 @@ velocity_jitter = 8
 [noise]
 noise_snrs_db = [15.0]
 noise_mode = "cycle"
+noise_download_dir = "assets/noises/internet"
+noisy_output_dir = "audio/chords/noisy"
 
 [realism]
 realism_variants = 2
 realism_sample_rates = [22050, 44100, 48000]
 realism_keep_duration = false
+realistic_output_dir = "audio/chords/realistic"
 
 [transpose]
 transpose_semitones = [-5, 7]
 transpose_roots = []
 transpose_qualities = []
+transposed_output_dir = "audio/chords/transposed"
 
 [manifest]
 manifest_train_ratio = 0.80
 manifest_val_ratio = 0.10
 manifest_test_ratio = 0.10
 include_missing_audio = false
+audio_manifest_path = "audio/manifest.csv"
 
 [callbacks]
 early_stopping_patience = 8

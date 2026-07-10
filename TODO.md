@@ -26,8 +26,8 @@ consultables, mais ne font plus partie du package actif.
 
 ```bash
 uv run musica generate-midi
+uv run musica download-assets
 uv run musica generate-wav
-uv run musica download-noises
 uv run musica augment-noise
 uv run musica augment-realistic
 uv run musica augment-transpose
@@ -39,8 +39,9 @@ uv run musica build-manifest
 ```bash
 uv run pytest
 uv run musica --help
-uv run musica generate-wav --output-dir audio/chords/clean --duration 0.5 --max-files 6 --renderer pretty-midi
-uv run musica build-manifest --output-path audio/manifest.csv
+uv run musica download-assets
+uv run musica generate-wav --duration 0.5 --max-files 6 --renderer pretty-midi
+uv run musica build-manifest
 ```
 
 ## TODO courts

@@ -16,6 +16,7 @@ from musica.audio.manifest import build_audio_manifest
 from musica.augmentation.noise import (
     DEFAULT_INTERNET_NOISES,
     augment_wav_dataset_with_noise,
+    download_url,
     download_noise_wavs,
     noise_sources_from_urls,
     parse_float_list,
@@ -25,6 +26,7 @@ from musica.augmentation.transpose import augment_wav_dataset_with_transposition
 from musica.config import MusicaConfig
 
 CommandHandler = Callable[[argparse.Namespace, MusicaConfig], None]
+DEFAULT_SOUNDFONT_URL = "https://musical-artifacts.com/artifacts/738/FluidR3_GM.sf2"
 
 
 def positive_float(value: str) -> float:
@@ -243,6 +245,75 @@ def build_parser(config: MusicaConfig | None = None) -> argparse.ArgumentParser:
         "--manifest-path",
         type=Path,
         help="CSV manifest path. Defaults to manifest.csv inside the output directory.",
+    )
+
+    soundfont_download_parser = subparsers.add_parser(
+        "download-soundfont",
+        help="Download the FluidR3 GM SoundFont used by the fluidsynth renderer.",
+    )
+    soundfont_download_parser.add_argument(
+        "--output-path",
+        type=Path,
+        default=config.soundfont_path,
+        help="Path where the .sf2 SoundFont is written.",
+    )
+    soundfont_download_parser.add_argument(
+        "--url",
+        default=DEFAULT_SOUNDFONT_URL,
+        help="SoundFont URL to download.",
+    )
+    soundfont_download_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Redownload the SoundFont if the output file already exists.",
+    )
+
+    assets_download_parser = subparsers.add_parser(
+        "download-assets",
+        help="Download external assets: the FluidR3 GM SoundFont and noise WAV files.",
+    )
+    assets_download_parser.add_argument(
+        "--soundfont-output-path",
+        type=Path,
+        default=config.soundfont_path,
+        help="Path where the .sf2 SoundFont is written.",
+    )
+    assets_download_parser.add_argument(
+        "--soundfont-url",
+        default=DEFAULT_SOUNDFONT_URL,
+        help="SoundFont URL to download.",
+    )
+    assets_download_parser.add_argument(
+        "--noise-output-dir",
+        type=Path,
+        default=config.noise_download_dir,
+        help="Directory where downloaded noise WAV files are written.",
+    )
+    assets_download_parser.add_argument(
+        "--noise-url",
+        action="append",
+        default=[],
+        help="Noise WAV URL to download. Repeat for multiple files.",
+    )
+    assets_download_parser.add_argument(
+        "--noise-manifest-path",
+        type=Path,
+        help="CSV manifest path for downloaded noises. Defaults to manifest.csv inside the noise output directory.",
+    )
+    assets_download_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Redownload assets that already exist.",
+    )
+    assets_download_parser.add_argument(
+        "--skip-soundfont",
+        action="store_true",
+        help="Do not download the SoundFont.",
+    )
+    assets_download_parser.add_argument(
+        "--skip-noises",
+        action="store_true",
+        help="Do not download noise WAV files.",
     )
 
     noise_augment_parser = subparsers.add_parser(
@@ -484,6 +555,60 @@ def run_download_noises(args: argparse.Namespace, config: MusicaConfig) -> None:
     print(f"Downloaded {len(downloaded)} noise WAV files in {args.output_dir}")
 
 
+def run_download_soundfont(args: argparse.Namespace, config: MusicaConfig) -> None:
+    downloaded = download_soundfont(
+        args.output_path,
+        url=args.url,
+        overwrite=args.overwrite,
+    )
+    if downloaded:
+        print(f"Downloaded SoundFont to {args.output_path}")
+    else:
+        print(f"SoundFont already exists at {args.output_path}")
+
+
+def download_soundfont(output_path: Path, *, url: str, overwrite: bool = False) -> bool:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists() and not overwrite:
+        return False
+
+    download_url(url, output_path)
+    return True
+
+
+def run_download_assets(args: argparse.Namespace, config: MusicaConfig) -> None:
+    if args.skip_soundfont and args.skip_noises:
+        raise ValueError("At least one asset type must be enabled")
+
+    if not args.skip_soundfont:
+        downloaded_soundfont = download_soundfont(
+            args.soundfont_output_path,
+            url=args.soundfont_url,
+            overwrite=args.overwrite,
+        )
+        if downloaded_soundfont:
+            print(f"Downloaded SoundFont to {args.soundfont_output_path}")
+        else:
+            print(f"SoundFont already exists at {args.soundfont_output_path}")
+
+    if not args.skip_noises:
+        sources = (
+            noise_sources_from_urls(args.noise_url)
+            if args.noise_url
+            else DEFAULT_INTERNET_NOISES
+        )
+        downloaded_noises = download_noise_wavs(
+            args.noise_output_dir,
+            sources=sources,
+            overwrite=args.overwrite,
+            manifest_path=args.noise_manifest_path,
+        )
+        print(
+            f"Downloaded {len(downloaded_noises)} noise WAV files "
+            f"in {args.noise_output_dir}"
+        )
+
+
 def run_augment_noise(args: argparse.Namespace, config: MusicaConfig) -> None:
     generated = augment_wav_dataset_with_noise(
         args.input_dir,
@@ -545,6 +670,8 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "generate-midi": run_generate_midi,
     "generate-wav": run_generate_wav,
     "download-noises": run_download_noises,
+    "download-soundfont": run_download_soundfont,
+    "download-assets": run_download_assets,
     "augment-noise": run_augment_noise,
     "augment-realistic": run_augment_realistic,
     "augment-transpose": run_augment_transpose,

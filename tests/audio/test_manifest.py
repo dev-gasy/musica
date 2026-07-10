@@ -4,7 +4,8 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from musica.audio.manifest import ManifestSource, build_audio_manifest
+from musica.audio.manifest import ManifestSource, build_audio_manifest, default_manifest_sources
+from musica.config import MusicaConfig
 
 
 def write_tone(path: Path, *, sample_rate: int = 8000, duration: float = 0.1) -> None:
@@ -53,3 +54,21 @@ def test_build_audio_manifest_from_generated_source(tmp_path: Path) -> None:
     rows = list(csv.DictReader(output_path.open()))
     assert rows[0]["label"] == "C_maj"
     assert rows[0]["sample_rate"] == "8000"
+
+
+def test_default_manifest_sources_use_feature_first_config_paths() -> None:
+    config = MusicaConfig(
+        clean_output_dir=Path("custom/clean"),
+        noisy_output_dir=Path("custom/noisy"),
+        realistic_output_dir=Path("custom/realistic"),
+        transposed_output_dir=Path("custom/transposed"),
+        recorded_audio_dir=Path("custom/recorded"),
+    )
+
+    sources = default_manifest_sources(config)
+
+    assert sources[0].manifest_path == Path("custom/clean/manifest.csv")
+    assert sources[1].manifest_path == Path("custom/noisy/manifest.csv")
+    assert sources[2].manifest_path == Path("custom/realistic/manifest.csv")
+    assert sources[3].manifest_path == Path("custom/transposed/manifest.csv")
+    assert sources[4].directory == Path("custom/recorded")

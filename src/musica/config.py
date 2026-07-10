@@ -35,6 +35,7 @@ class TrainingConfig(ConfigSection):
     force_retrain: bool = False
     val_ratio: PositiveFloat = 0.15
     test_ratio: PositiveFloat = 0.15
+    logs_dir: Path = Path("logs")
 
     @model_validator(mode="after")
     def validate_ratios(self) -> Self:
@@ -49,23 +50,17 @@ class FeatureConfig(ConfigSection):
     hop_length: AtLeastOneInt = 512
     bins_per_octave: AtLeastOneInt = 12
     n_chroma: Literal[12] = 12
+    cache_features: bool = True
+    feature_cache_dir: Path = Path("logs/features")
 
 
 class PredictionConfig(ConfigSection):
     top_k: AtLeastOneInt = 3
 
 
-class PathConfig(ConfigSection):
+class DatasetConfig(ConfigSection):
     dataset_dir: Path = Path("audio/chords")
-    logs_dir: Path = Path("logs")
-    midi_output_dir: Path = Path("audio/chords/midi")
-    clean_output_dir: Path = Path("audio/chords/clean")
-    noise_download_dir: Path = Path("assets/noises/internet")
-    noisy_output_dir: Path = Path("audio/chords/noisy")
-    realistic_output_dir: Path = Path("audio/chords/realistic")
-    transposed_output_dir: Path = Path("audio/chords/transposed")
     recorded_audio_dir: Path = Path("audio/chords/recorded")
-    audio_manifest_path: Path = Path("audio/manifest.csv")
 
 
 class ExampleAudioConfig(ConfigSection):
@@ -103,6 +98,8 @@ class AudioGenerationConfig(ConfigSection):
     chord_duration: PositiveFloat = 1.5
     chord_sample_rate: SampleRate = 44100
     renderer: Literal["auto", "pretty-midi", "fluidsynth"] = "auto"
+    midi_output_dir: Path = Path("audio/chords/midi")
+    clean_output_dir: Path = Path("audio/chords/clean")
     soundfont_path: Path = Path("assets/soundfonts/FluidR3_GM.sf2")
     instrument_programs: Annotated[dict[str, MidiProgram], Field(min_length=1)] = Field(
         default_factory=lambda: {
@@ -125,6 +122,8 @@ class HumanizationConfig(ConfigSection):
 class NoiseConfig(ConfigSection):
     noise_snrs_db: Annotated[tuple[float, ...], Field(min_length=1)] = (15.0,)
     noise_mode: Literal["cycle", "all"] = "cycle"
+    noise_download_dir: Path = Path("assets/noises/internet")
+    noisy_output_dir: Path = Path("audio/chords/noisy")
 
 
 class RealismConfig(ConfigSection):
@@ -135,12 +134,14 @@ class RealismConfig(ConfigSection):
         48000,
     )
     realism_keep_duration: bool = False
+    realistic_output_dir: Path = Path("audio/chords/realistic")
 
 
 class TranspositionConfig(ConfigSection):
     transpose_semitones: Annotated[tuple[int, ...], Field(min_length=1)] = (-5, 7)
     transpose_roots: tuple[str, ...] = ()
     transpose_qualities: tuple[str, ...] = ()
+    transposed_output_dir: Path = Path("audio/chords/transposed")
 
     @field_validator("transpose_semitones")
     @classmethod
@@ -155,6 +156,7 @@ class ManifestConfig(ConfigSection):
     manifest_val_ratio: NonNegativeFloat = 0.10
     manifest_test_ratio: NonNegativeFloat = 0.10
     include_missing_audio: bool = False
+    audio_manifest_path: Path = Path("audio/manifest.csv")
 
     @model_validator(mode="after")
     def validate_ratios(self) -> Self:
@@ -182,7 +184,7 @@ CONFIG_SECTIONS: dict[str, set[str]] = {
     "training": set(TrainingConfig.model_fields),
     "features": set(FeatureConfig.model_fields),
     "prediction": set(PredictionConfig.model_fields),
-    "paths": set(PathConfig.model_fields),
+    "dataset": set(DatasetConfig.model_fields),
     "examples": set(ExampleAudioConfig.model_fields),
     "model": {"architecture", "model_architecture"},
     "audio": set(AudioGenerationConfig.model_fields),
@@ -207,7 +209,7 @@ class MusicaConfig(BaseModel):
     training: TrainingConfig = Field(default_factory=TrainingConfig)
     features: FeatureConfig = Field(default_factory=FeatureConfig)
     prediction: PredictionConfig = Field(default_factory=PredictionConfig)
-    paths: PathConfig = Field(default_factory=PathConfig)
+    dataset: DatasetConfig = Field(default_factory=DatasetConfig)
     examples: ExampleAudioConfig = Field(default_factory=ExampleAudioConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
     audio: AudioGenerationConfig = Field(default_factory=AudioGenerationConfig)
