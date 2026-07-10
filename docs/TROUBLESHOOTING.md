@@ -27,6 +27,23 @@ uv run musica setup-env
 
 Installation officielle : https://docs.astral.sh/uv/getting-started/installation/
 
+## TensorFlow ne s’installe pas avec Python 3.14
+
+Si `uv sync --extra dev` échoue avec un message indiquant que `tensorflow`
+n’a pas de wheel pour `cp314`, l’environnement utilise Python 3.14. Musica
+supporte Python 3.12 et 3.13 parce que TensorFlow 2.21 ne fournit pas encore de
+wheel pour Python 3.14.
+
+Depuis la racine du dépôt :
+
+```bash
+uv python install 3.13
+uv sync --extra dev
+```
+
+Le fichier `.python-version` du dépôt demande Python 3.13 à `uv` dans les clones
+neufs.
+
 ## Imports Python cassés
 
 Erreurs possibles :

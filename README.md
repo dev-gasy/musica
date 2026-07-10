@@ -22,6 +22,10 @@ uv sync --extra dev
 uv run musica setup-env
 ```
 
+Musica supporte Python 3.12 et 3.13. TensorFlow 2.21 ne publie pas encore de
+wheel pour Python 3.14, donc le dépôt inclut `.python-version` pour guider `uv`
+vers Python 3.13 dans un clone neuf.
+
 `setup-env` prépare ce qui manque et laisse tranquille ce qui existe déjà. À la
 fin, le dataset de travail doit contenir ces dossiers :
 

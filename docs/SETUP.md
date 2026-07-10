@@ -30,7 +30,9 @@ par le pipeline.
 
 ## Prérequis
 
-- Python `>=3.12`, comme indiqué dans `pyproject.toml`.
+- Python `>=3.12,<3.14`, comme indiqué dans `pyproject.toml`.
+  TensorFlow 2.21 fournit des wheels pour Python 3.12 et 3.13, mais pas pour
+  Python 3.14.
 - `uv` pour installer les dépendances et lancer les commandes.
 - Une connexion réseau au premier setup, si les assets externes ne sont pas déjà
   présents.
