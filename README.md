@@ -1,10 +1,12 @@
 # Musica
 
-Musica reconnaît des accords dans de courts fichiers WAV.
+**Musica** est un prototype de reconnaissance automatique d’accords à partir de
+courts extraits audio WAV.
 
-Le projet sait générer des accords propres, produire des versions bruitées ou
-plus réalistes, extraire des features Chroma-CQT, entraîner un CNN, puis tester
-les prédictions sur des exemples audio.
+L’objectif est de montrer comment un pipeline audio peut transformer un fichier
+sonore en prédiction d’accord. Ce type de brique peut servir, à terme, à des
+usages comme l’aide à la transcription, l’indexation simple d’extraits musicaux
+ou l’analyse automatique de petits catalogues audio.
 
 ## À lire
 
@@ -24,9 +26,9 @@ uv run musica setup-env
 
 Musica supporte Python 3.12 et 3.13. TensorFlow 2.21 ne publie pas encore de
 wheel pour Python 3.14, donc le dépôt inclut `.python-version` pour guider `uv`
-vers Python 3.13 dans un clone neuf.
+vers Python 3.13.
 
-`setup-env` prépare ce qui manque et laisse tranquille ce qui existe déjà. À la
+`setup-env` prépare ce qui manque. À la
 fin, le dataset de travail doit contenir ces dossiers :
 
 ```text
